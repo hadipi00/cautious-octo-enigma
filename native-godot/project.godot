@@ -1,0 +1,18 @@
+; Engine configuration file — AIRDOM
+config_version=5
+
+[application]
+
+config/name="AIRDOM"
+config/description="شبیه‌ساز نبرد هوایی"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7")
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+
+[rendering]
+
+anti_aliasing/quality/msaa_3d=1

@@ -1,0 +1,13 @@
+{
+  "id": "mirage2000c", "name": "Mirage 2000C", "nation": "FRANCE", "role": "delta interceptor",
+  "mass": 7500, "fuelCap": 3100, "thrustMil": 64000, "thrustAB": 97000,
+  "burnMil": 1.0, "burnAB": 4.8, "wingArea": 41.0, "wingSpan": 9.13, "len": 14.36,
+  "CL0": 0.06, "CLa": 4.2, "aStall": 24, "CD0": 0.020, "kInd": 0.12,
+  "maxG": 9, "rollRate": 270, "pitchRate": 22, "yawRate": 8,
+  "gearH": 2.0, "bellyH": 1.1,
+  "guns": [{ "name": "DEFA 554", "ammo": 125 }],
+  "missiles": [{ "name": "Magic II", "count": 4 }],
+  "bombs": 2, "rockets": 0, "flares": 48,
+  "stats": { "speed": 0.88, "agility": 0.85, "firepower": 0.7, "armor": 0.75 },
+  "visual": { "wingType": "delta", "tailType": "single", "engines": 1, "body": "#8fa3b8", "accent": "#46596e", "fusW": 0.95 }
+}

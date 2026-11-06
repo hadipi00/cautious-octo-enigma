@@ -1,0 +1,13 @@
+{
+  "id": "f14b", "name": "F-14B Tomcat", "nation": "USA", "role": "interceptor",
+  "mass": 19800, "fuelCap": 7300, "thrustMil": 208000, "thrustAB": 241400,
+  "burnMil": 2.4, "burnAB": 11.0, "wingArea": 52.5, "wingSpan": 19.55, "len": 19.1,
+  "CL0": 0.04, "CLa": 4.3, "aStall": 16, "CD0": 0.026, "kInd": 0.11,
+  "maxG": 7.5, "rollRate": 200, "pitchRate": 17, "yawRate": 6,
+  "gearH": 2.4, "bellyH": 1.3,
+  "guns": [{ "name": "M61A1 VULCAN", "ammo": 675 }],
+  "missiles": [{ "name": "AIM-9M", "count": 4 }],
+  "bombs": 4, "rockets": 0, "flares": 48,
+  "stats": { "speed": 0.95, "agility": 0.55, "firepower": 0.85, "armor": 0.9 },
+  "visual": { "wingType": "variable", "tailType": "twin", "engines": 2, "body": "#8a8d92", "accent": "#3d434d", "fusW": 1.15 }
+}

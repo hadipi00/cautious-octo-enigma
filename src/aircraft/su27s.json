@@ -1,0 +1,13 @@
+{
+  "id": "su27s", "name": "Su-27S Flanker", "nation": "RUSSIA", "role": "air superiority",
+  "mass": 16400, "fuelCap": 9400, "thrustMil": 152000, "thrustAB": 245200,
+  "burnMil": 2.2, "burnAB": 10.5, "wingArea": 62.0, "wingSpan": 14.7, "len": 21.9,
+  "CL0": 0.05, "CLa": 4.8, "aStall": 20, "CD0": 0.022, "kInd": 0.10,
+  "maxG": 9, "rollRate": 240, "pitchRate": 24, "yawRate": 10,
+  "gearH": 2.5, "bellyH": 1.4,
+  "guns": [{ "name": "GSh-30-1", "ammo": 150 }],
+  "missiles": [{ "name": "R-73", "count": 6 }],
+  "bombs": 4, "rockets": 0, "flares": 96,
+  "stats": { "speed": 0.9, "agility": 0.95, "firepower": 0.9, "armor": 0.95 },
+  "visual": { "wingType": "swept", "tailType": "twin", "engines": 2, "body": "#5d7285", "accent": "#31404f", "fusW": 1.1 }
+}

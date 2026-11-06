@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIRDOM — شبیه‌ساز نبرد هوایی</title>
+<style>
+  :root{ --hud:#9dffb0; --hudWarn:#ffb340; --hudRed:#ff5050; --panel:#101623; --line:#2a3a55; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Segoe UI",Tahoma,sans-serif;user-select:none}
+  #c{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+  /* ================= HUD ================= */
+  #hud{position:fixed;inset:0;pointer-events:none;color:var(--hud);
+       font-family:Consolas,"Courier New",monospace;display:none}
+  .hud-box{position:absolute;text-shadow:0 0 5px rgba(0,0,0,.95);font-size:15px;line-height:1.45;white-space:pre}
+  #spd{left:4.5%;top:40%}
+  #alt{right:4.5%;top:40%;text-align:right}
+  #hdg{left:50%;top:4.5%;transform:translateX(-50%)}
+  #gload{left:50%;top:57%;transform:translateX(-50%)}
+  #thr{left:4.5%;bottom:5.5%}
+  #wpn{right:4.5%;bottom:5.5%;text-align:right}
+  #score{left:50%;top:9.5%;transform:translateX(-50%);color:var(--hudWarn);font-size:14px}
+  #strike{left:50%;top:13.5%;transform:translateX(-50%);color:#ffd27a;font-size:13px;display:none}
+  #warn{left:50%;top:20%;transform:translateX(-50%);color:var(--hudWarn);font-weight:bold;font-size:18px}
+  .blink{animation:bl .55s steps(2) infinite}
+  @keyframes bl{50%{opacity:0}}
+  #banner{position:absolute;left:0;right:0;top:34%;text-align:center;font-size:19px;
+          color:#d8ffe0;text-shadow:0 0 8px rgba(0,0,0,.9);opacity:0;transition:opacity .4s}
+  #killfeed{position:absolute;right:2%;top:16%;text-align:left;font-size:13.5px;color:#ffe6c0}
+  #killfeed div{margin-bottom:4px;text-shadow:0 1px 3px #000;transition:opacity .4s}
+  #hitmarker{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(45deg);
+             width:26px;height:26px;opacity:0;transition:opacity .1s}
+  #hitmarker::before,#hitmarker::after{content:"";position:absolute;background:#fff}
+  #hitmarker::before{left:50%;top:0;width:2px;height:100%;transform:translateX(-50%)}
+  #hitmarker::after{top:50%;left:0;height:2px;width:100%;transform:translateY(-50%)}
+  #cross{left:50%;top:50%;width:28px;height:28px;transform:translate(-50%,-50%);opacity:.85}
+  #cross::before{content:"";position:absolute;left:50%;top:0;width:2px;height:100%;background:var(--hud);transform:translateX(-50%)}
+  #cross::after{content:"";position:absolute;top:50%;left:0;height:2px;width:100%;background:var(--hud);transform:translateY(-50%)}
+  #velMarker{position:absolute;width:18px;height:18px;border:2px solid var(--hud);border-radius:50%;
+             transform:translate(-50%,-50%);opacity:.9;display:none}
+  #velMarker::after{content:"";position:absolute;top:50%;left:-12px;right:-12px;height:2px;background:var(--hud);transform:translateY(-50%);opacity:.7}
+  #tgtBox{position:absolute;width:40px;height:40px;border:2px solid var(--hudRed);transform:translate(-50%,-50%);display:none}
+  #tgtInfo{position:absolute;transform:translate(-50%,0);color:var(--hudRed);font-size:12px;text-align:center;display:none;white-space:pre}
+  #vignette{position:fixed;inset:0;pointer-events:none;
+            background:radial-gradient(ellipse at center,transparent 38%,rgba(12,0,0,.98) 100%);opacity:0}
+  #dmg{position:fixed;inset:0;pointer-events:none;
+       background:radial-gradient(ellipse at center,rgba(255,30,30,.18),rgba(255,0,0,.55));opacity:0}
+  #f3{position:absolute;left:10px;top:8px;font-size:12px;color:#fff;opacity:.9;display:none;white-space:pre;text-shadow:0 1px 2px #000}
+  #fpsBadge{position:absolute;right:10px;top:8px;font-size:12px;color:#fff;opacity:.65;text-shadow:0 1px 2px #000}
+  #camLabel{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);font-size:12px;opacity:.6}
+
+  /* ================= MENU ================= */
+  #menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;
+        background:radial-gradient(ellipse at 30% 20%,rgba(20,34,58,.9),rgba(5,8,14,.95))}
+  .panel{width:min(620px,94vw);max-height:94vh;overflow-y:auto;background:rgba(13,17,26,.95);
+         border:1px solid var(--line);border-radius:16px;padding:26px 32px;color:#dfe7f2;
+         box-shadow:0 12px 70px rgba(0,0,0,.65)}
+  .panel h1{font-size:40px;letter-spacing:11px;color:#7ecbff;font-weight:800;direction:ltr;text-align:center;margin-bottom:0}
+  .ptitle{font-size:24px;color:#7ecbff;text-align:center;margin-bottom:14px;font-weight:700}
+  .panel .sub{text-align:center;color:#8fa3bd;margin-bottom:18px;font-size:13px}
+  .btn{display:block;width:100%;padding:12px;margin:8px 0;background:#182238;border:1px solid #31486e;
+       border-radius:10px;color:#dfe7f2;font-size:15.5px;font-family:inherit;cursor:pointer;text-align:center;transition:all .15s}
+  .btn:hover{background:#22345a;border-color:#4d6fa3;transform:translateY(-1px)}
+  .btn.primary{background:#14406b;border-color:#2c6cb0;font-size:17px;font-weight:600}
+  .btn.primary:hover{background:#1a5288}
+  .row{display:flex;gap:10px;align-items:center;margin:9px 0}
+  .row label{flex:0 0 120px;color:#9fb2ca;font-size:13.5px}
+  .row select,.row input{flex:1;background:#0d1524;border:1px solid #31486e;color:#dfe7f2;
+       border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13.5px}
+  /* آشیانه */
+  #hangar{border:1px solid #22304a;border-radius:12px;background:#0c1220;padding:14px 16px;margin:12px 0}
+  #hangarNav{display:flex;justify-content:center;gap:14px;align-items:center;margin-bottom:8px}
+  #hangarNav button{background:#182238;border:1px solid #31486e;color:#dfe7f2;border-radius:8px;
+                    width:42px;height:32px;font-size:16px;cursor:pointer}
+  #hangarNav button:hover{background:#22345a}
+  #hangarCar{font-size:13px;color:#8fa3bd}
+  #hangarPrev .planeName{font-size:20px;font-weight:700;color:#cfe3ff;text-align:center}
+  #hangarPrev .planeMeta{text-align:center;color:#8fa3bd;font-size:12px;margin:2px 0 10px}
+  #hangarPrev .statRow{display:flex;align-items:center;margin:4px 0;font-size:13px}
+  #hangarPrev .statRow span{flex:0 0 64px;color:#9fb2ca}
+  #hangarPrev .statRow b{font-weight:400;letter-spacing:2px;color:#7ecbff;font-size:12px}
+  #hangarPrev .planeArm{text-align:center;color:#7a8fa8;font-size:11.5px;margin-top:8px}
+  .keys{margin-top:12px;border-top:1px solid #22304a;padding-top:11px;font-size:12px;color:#9fb2ca;
+        display:grid;grid-template-columns:1fr 1fr;gap:3px 16px;direction:rtl}
+  .keys b{color:#cfe3ff;font-family:Consolas,monospace;font-weight:600;direction:ltr;unicode-bidi:embed}
+  .hint{font-size:12px;color:#6f829c;margin-top:10px;text-align:center}
+  .reason{color:#ff9a8a;text-align:center;margin:10px 0;font-size:14px}
+  .endStats{display:flex;justify-content:center;gap:18px;margin:12px 0;font-size:14px;color:#9fb2ca;flex-wrap:wrap}
+  .endStats b{color:#cfe3ff}
+  .hidden{display:none!important}
+  #loadMsg{color:#8fa3bd;text-align:center;padding:60px 0;font-size:15px}
+  #mpRow{display:flex;gap:8px;margin:10px 0}
+  #mpRow input{flex:1;background:#0d1524;border:1px solid #31486e;color:#dfe7f2;border-radius:8px;padding:9px 12px;font-family:inherit;font-size:13.5px}
+  #mpStatus{text-align:center;font-size:13px;color:#ffd27a;min-height:18px}
+  .ghLink{text-align:center;margin-top:10px;font-size:11.5px}
+  .ghLink a{color:#5b7ba0;text-decoration:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div id="f3"></div>
+  <div id="fpsBadge"></div>
+  <div id="hdg" class="hud-box"></div>
+  <div id="spd" class="hud-box"></div>
+  <div id="alt" class="hud-box"></div>
+  <div id="gload" class="hud-box"></div>
+  <div id="thr" class="hud-box"></div>
+  <div id="wpn" class="hud-box"></div>
+  <div id="score" class="hud-box"></div>
+  <div id="strike" class="hud-box"></div>
+  <div id="warn" class="hud-box"></div>
+  <div id="banner"></div>
+  <div id="killfeed"></div>
+  <div id="hitmarker"></div>
+  <div id="cross" class="hud-box"></div>
+  <div id="velMarker"></div>
+  <div id="tgtBox"></div>
+  <div id="tgtInfo" class="hud-box"></div>
+  <div id="camLabel"></div>
+</div>
+<div id="vignette"></div>
+<div id="dmg"></div>
+
+<div id="menu">
+  <div class="panel" id="menuPanel">
+    <h1>AIRDOM</h1>
+    <div class="sub">شبیه‌ساز نبرد هوایی — نسخه ۱.۰</div>
+    <div id="loadMsg">در حال بارگذاری…</div>
+    <div id="menuBody" class="hidden">
+      <div id="hangar">
+        <div id="hangarNav">
+          <button id="hangarLeft">◀</button>
+          <span id="hangarCar"></span>
+          <button id="hangarRight">▶</button>
+        </div>
+        <div id="hangarPrev"></div>
+      </div>
+      <button class="btn primary" id="btnAir">✈ برتری هوایی — موج‌های دشمن</button>
+      <button class="btn" id="btnStrike">💥 حمله به بیس زمینی (SAM فعال)</button>
+      <button class="btn" id="btnTeam">🤝 نبرد تیمی — با ۲ متحد</button>
+      <button class="btn" id="btnFree">🛫 پرواز آزاد + فرود روی باند</button>
+      <div style="border-top:1px solid #22304a;margin:14px 0 6px"></div>
+      <div id="mpRow">
+        <input id="mpName" placeholder="اسم خلبان" maxlength="16" style="flex:0 0 130px">
+        <input id="mpIp" placeholder="IP میزبان برای بازی گروهی WiFi (مثلاً 192.168.1.5)">
+        <button class="btn" id="btnMp" style="width:auto;margin:0;padding:9px 16px">🌐 اتصال</button>
+      </div>
+      <div id="mpStatus"></div>
+      <div class="row">
+        <label for="qualitySel">کیفیت گرافیک</label>
+        <select id="qualitySel">
+          <option value="low">کم — برای گرافیک ضعیف</option>
+          <option value="medium">متوسط</option>
+          <option value="high" selected>بالا</option>
+          <option value="ultra">فوق</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="resScaleSel">رزولوشن دینامیک</label>
+        <select id="resScaleSel">
+          <option value="1" selected>روشن (تضمین ۶۰ فریم)</option>
+          <option value="0">خاموش</option>
+        </select>
+      </div>
+      <h2 style="font-size:16px;color:#7ecbff;margin:14px 0 6px">راهنمای کنترل</h2>
+      <div class="keys">
+        <span><b>↑ / ↓</b> — دماغه</span>
+        <span><b>A / D</b> — غلت</span>
+        <span><b>Q / E</b> — دُم</span>
+        <span><b>W / S</b> — گاز</span>
+        <span><b>Z</b> — افتربرنر</span>
+        <span><b>Space / کلیک</b> — توپ</span>
+        <span><b>F</b> — موشک (با قفل)</span>
+        <span><b>B</b> — بمب</span>
+        <span><b>R</b> — راکت</span>
+        <span><b>C</b> — فلر</span>
+        <span><b>G</b> — چرخ فرود</span>
+        <span><b>V</b> — فلپ</span>
+        <span><b>X</b> — ترمز هوایی</span>
+        <span><b>1/2/3</b> — دوربین</span>
+        <span><b>موس</b> — نگاه</span>
+        <span><b>Esc</b> — توقف</span>
+      </div>
+      <div class="ghLink"><a href="https://github.com/hadipi00/cautious-octo-enigma" target="_blank">سورس روی GitHub</a></div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

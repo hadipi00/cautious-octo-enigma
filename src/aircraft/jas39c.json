@@ -1,0 +1,13 @@
+{
+  "id": "jas39c", "name": "JAS 39C Gripen", "nation": "SWEDEN", "role": "multirole light",
+  "mass": 8000, "fuelCap": 2900, "thrustMil": 54000, "thrustAB": 80500,
+  "burnMil": 0.95, "burnAB": 4.5, "wingArea": 25.5, "wingSpan": 8.4, "len": 14.1,
+  "CL0": 0.04, "CLa": 4.7, "aStall": 18, "CD0": 0.019, "kInd": 0.12,
+  "maxG": 9, "rollRate": 280, "pitchRate": 23, "yawRate": 9,
+  "gearH": 2.0, "bellyH": 1.1,
+  "guns": [{ "name": "Mauser BK-27", "ammo": 120 }],
+  "missiles": [{ "name": "IRIS-T", "count": 4 }],
+  "bombs": 4, "rockets": 0, "flares": 48,
+  "stats": { "speed": 0.82, "agility": 0.9, "firepower": 0.75, "armor": 0.7 },
+  "visual": { "wingType": "delta", "tailType": "single", "engines": 1, "body": "#7c8f7d", "accent": "#44523f", "fusW": 0.92 }
+}

@@ -1,0 +1,6 @@
+shots/
+*.log
+node_modules/
+.godot/
+.DS_Store
+Thumbs.db
