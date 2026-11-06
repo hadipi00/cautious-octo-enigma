@@ -56,10 +56,11 @@ export function stepFlight(st, spec, input, dt) {
   // تراست و سوخت
   let T = 0;
   if (st.fuel > 0) {
-    T = input.throttle * (input.ab ? spec.thrustAB : spec.thrustMil);
+    const tf = st.thrustFactor || 1;   // آسیب موتور
+    T = input.throttle * (input.ab ? spec.thrustAB : spec.thrustMil) * tf;
     st.fuel = Math.max(0, st.fuel - (input.ab ? spec.burnAB : spec.burnMil) * input.throttle * dt);
   }
-  st.afterburner = input.ab && input.throttle > 0.98 && st.fuel > 0;
+  st.afterburner = input.ab && input.throttle > 0.98 && st.fuel > 0 && (st.thrustFactor || 1) > 0.7;
 
   const L = q * S * CL;
   const D = q * S * CD;
@@ -93,6 +94,8 @@ export function stepFlight(st, spec, input, dt) {
   let pitchT = -input.pitch * spec.pitchRate * DEG * ctrlEff; // مثبت حول X = دماغه پایین
   let rollT = -input.roll * spec.rollRate * DEG * ctrlEff;    // مثبت حول Z = غلت چپ
   let yawT = input.yaw * spec.yawRate * DEG * ctrlEff;        // مثبت حول Y = دماغه راست
+  // یَو مخالف — غلت با پروانه، دماغه را کمی برعکس می‌کشد
+  yawT -= rollT * 0.05;
 
   // لیمیتِر FBW: جلوگیری از عبور از G و AOA مجاز
   if (fbw && V > 40 && !st.onGround) {
@@ -105,11 +108,28 @@ export function stepFlight(st, spec, input, dt) {
     if (aFut < alphaMin) pitchT = -(alphaMin - alpha) / lead;
   }
 
-  // رفتار استال: لرزش + افت دماغه
+  // رفتار استال: لرزش + افت دماغه + میل به چرخش (spin)
   if (st.stalled) {
     st.angVel.p += (Math.random() - 0.55) * SIM.stallBuffet * dt * 10;
     st.angVel.r += (Math.random() - 0.5) * SIM.stallBuffet * dt * 14;
     if (alpha > aStall * 1.2) pitchT = Math.max(pitchT, 0.2); // دماغه می‌خواهد بیفتد
+    // چرخش: در استال عمیق دماغه می‌چرخد — با دُم و ترک استیک ریکاوری می‌شود
+    if (alpha > aStall * 1.45) {
+      if (!st.spinDir) st.spinDir = Math.random() < 0.5 ? 1 : -1;
+      st.angVel.y += st.spinDir * 0.55 * dt;
+      st.angVel.r += st.spinDir * 0.4 * dt;
+    } else {
+      st.spinDir = 0;
+    }
+  }
+
+  // توربولانس نزدیک زمین — حس هوا
+  const agl = st.pos.y - (st.groundY || 0);
+  if (agl < 650 && !st.onGround) {
+    const turb = (1 - agl / 650) * 0.6;
+    st.angVel.p += (Math.random() - 0.5) * turb * dt * 3.5;
+    st.angVel.r += (Math.random() - 0.5) * turb * dt * 2.5;
+    st.vel.y += (Math.random() - 0.5) * turb * dt * 7;
   }
 
   // دستیار نگه‌داشتن ارتفاع وقتی خلبان کاری نمی‌کند (FBW روشن)

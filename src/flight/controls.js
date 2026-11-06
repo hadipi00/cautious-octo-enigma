@@ -6,6 +6,7 @@ const HANDLED = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyZ', 'KeyX', 'KeyG', 'KeyV',
   'KeyC', 'KeyF', 'KeyR', 'KeyB', 'KeyT', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
   'Tab', 'F3', 'Digit1', 'Digit2', 'Digit3', 'ShiftLeft', 'ShiftRight',
+  'KeyI', 'KeyJ', 'KeyK', 'KeyL', 'Home',
 ]);
 
 export class Controls {

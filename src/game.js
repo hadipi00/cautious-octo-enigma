@@ -70,9 +70,11 @@ export class Game {
 
     this.state = 'menu';           // menu | flying | paused | dead | victory
     this.missionType = null;
+    this.camMode = 0;              // کابین پیش‌فرض
+    this._wreckT = 0;
     this.aircraft = [];
     this.player = null;
-    this.camMode = 1;
+    this.camMode = 0;
     this.camPos = new THREE.Vector3(0, 500, 1200);
     this.camAim = new THREE.Vector3();
     this.wave = 0; this.kills = 0; this.score = 0;
@@ -307,6 +309,9 @@ export class Game {
     p.input.fbw = true;
     p.input.fire = input.fire;
 
+    // تست خودکار — قبل از به‌روزرسانی هواپیماها تا ورودی‌هایش اعمال شوند
+    if (this._autotest) this._autotestStep(dt);
+
     // هواپیماها: AI + فیزیک
     const ctx = {
       aircraft: this.aircraft,
@@ -326,6 +331,23 @@ export class Game {
     this.effects.update(dt);
     this.clouds.update(this.camera.position);
     this.sky.update(p.st.pos);
+
+    // لاشه‌های در حال سوختن روی زمین
+    this._wreckT -= dt;
+    if (this._wreckT <= 0) {
+      this._wreckT = 0.18;
+      for (const t of this.props.targets) {
+        if (!t.alive) {
+          t.smokeT = (t.smokeT ?? 45) - 0.18;
+          if (t.smokeT > 0) {
+            _tmp.copy(t.pos).add(_axis.set((Math.random() - 0.5) * 10, 4, (Math.random() - 0.5) * 10));
+            this.effects.puff(_tmp, _axis.set(0, 7, 0), 9, 2.6, 0x1e1c1a, 0.5);
+            if (Math.random() < 0.3) this.effects.puff(_tmp, _axis.set(0, 3, 0), 4.5, 0.6, 0xff7020, 0.6);
+          }
+        }
+      }
+    }
+
     this._updateCamera(dt);
     this.audio.updateEngine(p.st);
     this.audio.setRwr(this.projectiles.missileInbound(p));
@@ -348,9 +370,6 @@ export class Game {
 
     // چندنفره
     if (this.net.active) this.net.update(dt);
-
-    // تست خودکار
-    if (this._autotest) this._autotestStep(dt);
   }
 
   _action(code) {
@@ -365,7 +384,7 @@ export class Game {
       case 'KeyR': p.fireRockets(); break;
       case 'KeyC': p.dropFlares(); break;
       case 'Digit1': this.camMode = 0; this.hud.setCamLabel('COCKPIT'); break;
-      case 'Digit2': this.camMode = 1; this.hud.setCamLabel('CHASE'); break;
+      case 'Digit2': this.camMode = 0; this.hud.setCamLabel('CHASE'); break;
       case 'Digit3': this.camMode = 2; this.hud.setCamLabel('FAR'); break;
       case 'F3': this.hud.toggleF3(); break;
       case 'KeyT': this.net.chatToggle && this.net.chatToggle(); break;
@@ -380,8 +399,16 @@ export class Game {
       look.pitch = damp(look.pitch, 0, 4, dt);
     }
     const targetFov = this.camMode === 0 ? CAM.cockpitFov : CAM.chaseFov;
+    // چرخش سر با دکمه‌ها (I/J/K/L) — وسط کردن با Home
+    const K = this.controls.keys;
+    if (K.has('KeyJ')) { look.yaw += 2.0 * dt; this.controls.lastMove = performance.now(); }
+    if (K.has('KeyL')) { look.yaw -= 2.0 * dt; this.controls.lastMove = performance.now(); }
+    if (K.has('KeyI')) { look.pitch += 1.6 * dt; this.controls.lastMove = performance.now(); }
+    if (K.has('KeyK')) { look.pitch -= 1.6 * dt; this.controls.lastMove = performance.now(); }
+    if (K.has('Home')) { look.yaw = 0; look.pitch = 0; }
     if (this.camMode === 0) {
-      _off.set(0, 0.85, 4.4).applyQuaternion(st.quat).add(st.pos);
+      const head = this.player.cockpitHead || new THREE.Vector3(0, 0.85, 4.4);
+      _off.copy(head).applyQuaternion(st.quat).add(st.pos);
       this.camera.position.copy(_off);
       _eul.set(look.pitch, look.yaw, 0, 'YXZ');
       _q.setFromEuler(_eul);
@@ -494,13 +521,13 @@ export class Game {
         p.input.fire = false;
       }
     }
-    for (const mark of [3, 6, 9, 12]) {
+    for (const mark of [3, 6, 9, 12, 20, 28]) {
       if (this._t >= mark && !this._shots.includes(mark)) {
         this._shots.push(mark);
         console.log(`AUTOTEST t=${this._t.toFixed(1)} v=${Math.round(this.player.st.V)} pos=${this.player.st.pos.x | 0},${this.player.st.pos.y | 0},${this.player.st.pos.z | 0} kills=${this.kills} enemies=${this.aircraft.filter(a => a.team === 'red' && a.alive).length}`);
       }
     }
-    if (this._t > 14) {
+    if (this._t > 34) {
       console.log(`AUTOTEST-DONE kills=${this.kills} score=${this.score}`);
       setTimeout(() => window.close(), 300);
     }

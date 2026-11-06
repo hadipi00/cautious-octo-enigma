@@ -49,6 +49,34 @@ export class EffectSystem {
       scene.add(l);
       this.lights.push({ l, life: 0, maxLife: 0.7, peak: 20 });
     }
+
+    // ---------- موج انفجار (حلقه در حال انبساط) ----------
+    this.rings = [];
+    const ringGeo = new THREE.RingGeometry(0.8, 1, 28);
+    for (let i = 0; i < 5; i++) {
+      const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
+        color: 0xffc070, transparent: true, opacity: 0,
+        side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
+      }));
+      m.visible = false;
+      scene.add(m);
+      this.rings.push({ m, life: 0, maxLife: 0.9, scale: 30 });
+    }
+
+    // ---------- ترکش‌های پرتابی ----------
+    this.debris = [];
+    const dGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7);
+    const dMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.9 });
+    for (let i = 0; i < 42; i++) {
+      const m = new THREE.Mesh(dGeo, dMat);
+      m.visible = false;
+      m.castShadow = false;
+      scene.add(m);
+      this.debris.push({
+        m, vel: new THREE.Vector3(), rot: new THREE.Vector3(),
+        life: 0, active: false,
+      });
+    }
   }
 
   puff(pos, vel, size, life, color = 0xaaaaaa, opacity = 0.55) {
@@ -107,6 +135,30 @@ export class EffectSystem {
     fl.l.position.y += 6;
     fl.peak = 26 * scale;
     fl.life = 0.75; fl.maxLife = 0.75;
+
+    // موج انفجار
+    const ring = this.rings.find(r => r.life <= 0) || this.rings[0];
+    ring.m.visible = true;
+    ring.m.position.copy(pos);
+    ring.m.rotation.set(-Math.PI / 2 + (Math.random() - 0.5) * 0.6, 0, Math.random() * 3);
+    ring.m.scale.setScalar(2);
+    ring.m.material.opacity = 0.85;
+    ring.life = 0.9; ring.maxLife = 0.9;
+    ring.scale = 34 * scale;
+
+    // ترکش‌های فلزی
+    let dn = 0;
+    for (const d of this.debris) {
+      if (d.active) continue;
+      d.active = true;
+      d.life = 1.6 + Math.random() * 1.4;
+      d.m.visible = true;
+      d.m.position.copy(pos);
+      d.m.scale.setScalar(0.5 + Math.random() * 1.2 * scale);
+      d.vel.set((Math.random() - 0.5) * 60, 12 + Math.random() * 45, (Math.random() - 0.5) * 60);
+      d.rot.set(Math.random() * 9, Math.random() * 9, Math.random() * 9);
+      if (++dn >= 5 + Math.round(scale * 2)) break;
+    }
   }
 
   spark(pos) {
@@ -159,6 +211,24 @@ export class EffectSystem {
       f.life -= dt;
       if (f.life <= 0) { f.l.visible = false; continue; }
       f.l.intensity = f.peak * (f.life / f.maxLife);
+    }
+    for (const r of this.rings) {
+      if (r.life <= 0) continue;
+      r.life -= dt;
+      if (r.life <= 0) { r.m.visible = false; continue; }
+      const t = 1 - r.life / r.maxLife;
+      r.m.scale.setScalar(2 + t * r.scale);
+      r.m.material.opacity = 0.85 * (1 - t);
+    }
+    for (const d of this.debris) {
+      if (!d.active) continue;
+      d.life -= dt;
+      if (d.life <= 0) { d.active = false; d.m.visible = false; continue; }
+      d.vel.y -= 28 * dt;
+      d.m.position.addScaledVector(d.vel, dt);
+      d.m.rotation.x += d.rot.x * dt;
+      d.m.rotation.y += d.rot.y * dt;
+      d.m.rotation.z += d.rot.z * dt;
     }
   }
 }

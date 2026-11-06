@@ -4,6 +4,7 @@
 // ============================================================
 import * as THREE from 'three';
 import { buildJet } from '../models/parametric.js';
+import { buildCockpit } from '../cockpit.js';
 import { stepFlight } from './model.js';
 import { SIM, BASES, WEAPONS } from '../config.js';
 import { DEG, clamp } from '../utils.js';
@@ -30,6 +31,12 @@ export class Aircraft {
     this.group = built.group;
     this.refs = built.refs;
     scene.add(this.group);
+
+    // کابین سه‌بعدی — همه جنگنده‌ها دارند
+    const cs = spec.len / 15;
+    this.cockpit = buildCockpit(spec);
+    this.cockpitHead = new THREE.Vector3(0, 0.30 * cs, 1.95 * cs);
+    this.group.add(this.cockpit.group);
 
     this.st = {
       pos: new THREE.Vector3(), vel: new THREE.Vector3(), quat: new THREE.Quaternion(),
@@ -155,9 +162,9 @@ export class Aircraft {
     this.refs.gearGroup.visible = st.gear;
     for (const m of this.refs.abGlows) m.visible = st.afterburner;
 
-    // دنباله G بالا / سوپرسونیک
+    // دنباله G بالا / سوپرسونیک / زاویه حمله بالا (گردباد)
     this.contrailT -= dt;
-    if (this.contrailT <= 0 && (Math.abs(st.gForce) > 4.5 || st.mach > 0.92) && !st.onGround) {
+    if (this.contrailT <= 0 && (Math.abs(st.gForce) > 4.5 || st.mach > 0.92 || Math.abs(st.alpha) > 0.21) && !st.onGround) {
       this.contrailT = 0.05;
       if (this.effects) {
         _right.set(1, 0, 0).applyQuaternion(st.quat).multiplyScalar(this.spec.wingSpan * 0.45);
@@ -167,20 +174,38 @@ export class Aircraft {
         }
       }
     }
-    // دود آسیب
-    if (this.hp < this.hpMax * 0.4) {
+    // دود آسیب + آتش موتور
+    if (this.hp < this.hpMax * 0.3) {
+      st.thrustFactor = 0.45 + Math.random() * 0.15;
       this.smokeT -= dt;
       if (this.smokeT <= 0) {
-        this.smokeT = 0.06;
+        this.smokeT = 0.05;
         if (this.effects) {
-          _tmp.copy(st.pos).addScaledVector(_fwd.set(0, 0, 1).applyQuaternion(st.quat), 6);
-          this.effects.puff(_tmp, _tmp.set(0, 2, 0), 4, 1.2, 0x333333, 0.5);
+          _fwd.set(0, 0, 1).applyQuaternion(st.quat);
+          _tmp.copy(st.pos).addScaledVector(_fwd, -6.5 * (this.spec.len / 15));
+          this.effects.puff(_tmp, _tmp.set(0, 1.2, 0), 3.2, 0.5, 0xff6020, 0.75); // شعله
+          _tmp.copy(st.pos).addScaledVector(_fwd, -7.5 * (this.spec.len / 15));
+          this.effects.puff(_tmp, _tmp.set(0, 2.2, 0), 5, 1.5, 0x171717, 0.65);   // دود تیره
         }
       }
+    } else if (this.hp < this.hpMax * 0.45) {
+      st.thrustFactor = 0.85;
+      this.smokeT -= dt;
+      if (this.smokeT <= 0) {
+        this.smokeT = 0.07;
+        if (this.effects) {
+          _fwd.set(0, 0, 1).applyQuaternion(st.quat);
+          _tmp.copy(st.pos).addScaledVector(_fwd, -7 * (this.spec.len / 15));
+          this.effects.puff(_tmp, _tmp.set(0, 2, 0), 4.5, 1.3, 0x333333, 0.5);
+        }
+      }
+    } else {
+      st.thrustFactor = 1;
     }
 
     this._updateLock(dt);
     if (inp.fire) this._fireGun(dt);
+    if (this.cockpit) this.cockpit.update(dt, this, this.game);
   }
 
   _ground(dt, inp) {

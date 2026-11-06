@@ -12,7 +12,7 @@ export function buildJet(v = {}, len = 15, span = 10) {
 
   const g = new THREE.Group();
   const bodyMat = new THREE.MeshStandardMaterial({
-    color: v.body || '#7f8d9d', roughness: 0.55, metalness: 0.35, side: THREE.DoubleSide,
+    color: v.body || '#7f8d9d', roughness: 0.55, metalness: 0.35,
   });
   const darkMat = new THREE.MeshStandardMaterial({ color: '#3a4148', roughness: 0.5, metalness: 0.55 });
   const glassMat = new THREE.MeshStandardMaterial({ color: '#152232', roughness: 0.12, metalness: 0.9 });
@@ -164,6 +164,36 @@ export function buildJet(v = {}, len = 15, span = 10) {
   mkLight(0xff3030, -semi - 0.45 * s, -0.12 * s, wp.zLE - wp.sweep); // چپ قرمز
   mkLight(0x30ff40, semi + 0.45 * s, -0.12 * s, wp.zLE - wp.sweep);  // راست سبز
   mkLight(0xffffff, 0, 0.6 * s, -7.4 * s);                            // دم سفید
+
+  // ---------- ریل و موشک زیر بال ----------
+  const railMat = new THREE.MeshStandardMaterial({ color: '#4a5058', roughness: 0.5, metalness: 0.4 });
+  const mslMat = new THREE.MeshStandardMaterial({ color: '#c8ccd2', roughness: 0.4, metalness: 0.5 });
+  for (const sx of [1, -1]) {
+    const pylon = new THREE.Mesh(new THREE.BoxGeometry(0.10 * s, 0.16 * s, 0.9 * s), railMat);
+    pylon.position.set(sx * semi * 0.55, -0.20 * s, wp.zLE - wp.sweep * 0.55 - 0.3 * s);
+    g.add(pylon);
+    for (const off of [-0.28, 0.28]) {
+      const mslG = new THREE.Group();
+      const mbody = new THREE.Mesh(new THREE.CylinderGeometry(0.07 * s, 0.07 * s, 1.5 * s, 6), mslMat);
+      mbody.rotation.x = Math.PI / 2;
+      const mnose = new THREE.Mesh(new THREE.ConeGeometry(0.07 * s, 0.34 * s, 6), mslMat);
+      mnose.rotation.x = -Math.PI / 2;
+      mnose.position.z = -0.9 * s;
+      mslG.add(mbody, mnose);
+      mslG.position.set(
+        sx * semi * 0.55 + off * s,
+        -0.30 * s,
+        wp.zLE - wp.sweep * 0.55 - 0.3 * s
+      );
+      g.add(mslG);
+    }
+  }
+
+  // ---------- نوار رنگی دم (نشان اسکادران) ----------
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.11 * s, (tailType === 'twin' ? 2.1 : 2.7) * 0.72 * s, 0.5 * s),
+    new THREE.MeshStandardMaterial({ color: v.accent || '#55606d', roughness: 0.6 }));
+  stripe.position.set(tailType === 'twin' ? 0.62 * s : 0, 0.4 * s + (tailType === 'twin' ? 1.05 : 1.35) * s, -3.3 * s);
+  g.add(stripe);
 
   g.traverse(o => { if (o.isMesh && o.material !== abMat && o.material !== abCoreMat) o.castShadow = true; });
 

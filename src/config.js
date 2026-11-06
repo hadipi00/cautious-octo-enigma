@@ -54,15 +54,15 @@ export const SIM = {
 // تسلیحات (مشترک بین جنگنده‌ها؛ تعدادها در JSON هر جنگنده)
 export const WEAPONS = {
   gunMv: 1050,           // سرعت دهانه توپ
-  gunDmg: 5,
+  gunDmg: 16,
   missileSpeed: 980,
   missileTurn: 3.2,      // rad/s
-  missileDmg: 65,
+  missileDmg: 85,
   missileLife: 14,
-  bombDmg: 120,
+  bombDmg: 140,
   bombRadius: 60,
   rocketSpeed: 620,
-  rocketDmg: 28,
+  rocketDmg: 45,
   rocketLife: 6,
   lockCone: 25,          // درجه
   lockRange: 9000,

@@ -67,6 +67,14 @@ export class GroundDefense {
               false, 6, null
             );
           }
+          // فلک: انفجارهای هوایی نزدیک هدف — جو نبرد
+          if (Math.random() < 0.6) {
+            const flak = _lead.clone().add(new THREE.Vector3(
+              (Math.random() - 0.5) * 70, (Math.random() - 0.5) * 50, (Math.random() - 0.5) * 70
+            ));
+            this.effects.puff(flak, new THREE.Vector3(0, 1, 0), 8, 1.3, 0x242424, 0.6);
+            this.effects.spark(flak);
+          }
           site.cooldown = WEAPONS.aaaReload;
           break;
         }

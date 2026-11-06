@@ -1,13 +1,62 @@
 {
-  "id": "mig29a", "name": "MiG-29A Fulcrum", "nation": "RUSSIA", "role": "dogfighter",
-  "mass": 11000, "fuelCap": 3500, "thrustMil": 100000, "thrustAB": 166000,
-  "burnMil": 1.6, "burnAB": 7.5, "wingArea": 38.0, "wingSpan": 11.36, "len": 17.3,
-  "CL0": 0.05, "CLa": 4.9, "aStall": 21, "CD0": 0.023, "kInd": 0.11,
-  "maxG": 9, "rollRate": 250, "pitchRate": 25, "yawRate": 11,
-  "gearH": 2.3, "bellyH": 1.25,
-  "guns": [{ "name": "GSh-30-1", "ammo": 150 }],
-  "missiles": [{ "name": "R-60M", "count": 4 }],
-  "bombs": 2, "rockets": 0, "flares": 60,
-  "stats": { "speed": 0.85, "agility": 1.0, "firepower": 0.8, "armor": 0.8 },
-  "visual": { "wingType": "swept", "tailType": "twin", "engines": 2, "body": "#6e8b70", "accent": "#3c5240", "fusW": 1.05 }
+  "id": "mig29a",
+  "name": "MiG-29A Fulcrum",
+  "nation": "RUSSIA",
+  "role": "dogfighter",
+  "mass": 11000,
+  "fuelCap": 3500,
+  "thrustMil": 100000,
+  "thrustAB": 166000,
+  "burnMil": 1.6,
+  "burnAB": 7.5,
+  "wingArea": 38.0,
+  "wingSpan": 11.36,
+  "len": 17.3,
+  "CL0": 0.05,
+  "CLa": 4.9,
+  "aStall": 21,
+  "CD0": 0.023,
+  "kInd": 0.11,
+  "maxG": 9,
+  "rollRate": 250,
+  "pitchRate": 25,
+  "yawRate": 11,
+  "gearH": 2.3,
+  "bellyH": 1.25,
+  "guns": [
+    {
+      "name": "GSh-30-1",
+      "ammo": 150
+    }
+  ],
+  "missiles": [
+    {
+      "name": "R-60M",
+      "count": 4
+    }
+  ],
+  "bombs": 2,
+  "rockets": 0,
+  "flares": 60,
+  "stats": {
+    "speed": 0.85,
+    "agility": 1.0,
+    "firepower": 0.8,
+    "armor": 0.8
+  },
+  "visual": {
+    "wingType": "swept",
+    "tailType": "twin",
+    "engines": 2,
+    "body": "#6e8b70",
+    "accent": "#3c5240",
+    "fusW": 1.05
+  },
+  "cockpit": {
+    "style": "russia",
+    "panel": "#2a4a44",
+    "sideStick": false,
+    "mfds": 2
+  },
+  "hp": 110
 }
