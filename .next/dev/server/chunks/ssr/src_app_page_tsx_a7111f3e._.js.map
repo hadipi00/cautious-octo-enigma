@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///home/z/my-project/src/app/page.tsx"],"sourcesContent":["'use client'\n\nexport default function Home() {\n  return (\n    <div style={{\n      position: 'fixed',\n      inset: 0,\n      display: 'flex',\n      flexDirection: 'column',\n      background: '#05070c',\n    }}>\n      <iframe\n        src=\"/game/index.html\"\n        title=\"WAR THUNDER ELECTRON — browser air combat\"\n        allow=\"pointer-lock; fullscreen; autoplay\"\n        style={{\n          flex: 1,\n          width: '100%',\n          border: 'none',\n        }}\n      />\n    </div>\n  )\n}\n"],"names":[],"mappings":";;;;;AAAA;;AAEe,SAAS;IACtB,qBACE,8OAAC;QAAI,OAAO;YACV,UAAU;YACV,OAAO;YACP,SAAS;YACT,eAAe;YACf,YAAY;QACd;kBACE,cAAA,8OAAC;YACC,KAAI;YACJ,OAAM;YACN,OAAM;YACN,OAAO;gBACL,MAAM;gBACN,OAAO;gBACP,QAAQ;YACV;;;;;;;;;;;AAIR"}}]
-}

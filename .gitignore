@@ -7,3 +7,10 @@ Thumbs.db
 .gh-mirror/
 tool-results/
 agent-ctx/
+.next/
+skills/
+next-env.d.ts
+db/
+examples/
+prisma/
+refactor/
