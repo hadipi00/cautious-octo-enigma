@@ -4,3 +4,6 @@ node_modules/
 .godot/
 .DS_Store
 Thumbs.db
+.gh-mirror/
+tool-results/
+agent-ctx/

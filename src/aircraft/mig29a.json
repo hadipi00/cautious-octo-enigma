@@ -31,8 +31,16 @@
   ],
   "missiles": [
     {
+      "name": "R-27R",
+      "type": "sarh",
+      "count": 2,
+      "range": 22000
+    },
+    {
       "name": "R-60M",
-      "count": 4
+      "type": "ir",
+      "count": 4,
+      "range": 6000
     }
   ],
   "bombs": 2,
@@ -58,5 +66,10 @@
     "sideStick": false,
     "mfds": 2
   },
-  "hp": 110
+  "hp": 110,
+  "radar": {
+    "range": 70000,
+    "gimbal": 55
+  },
+  "rcs": 5
 }

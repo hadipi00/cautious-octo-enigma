@@ -19,6 +19,7 @@ export class Terrain {
     this._buildHeightfield();
     this._buildMesh(scene, quality);
     this._buildRocks(scene, quality);
+    this._buildTrees(scene, quality);
     this._buildBase(scene);
   }
 
@@ -143,6 +144,60 @@ export class Terrain {
     inst.castShadow = true;
     inst.receiveShadow = true;
     scene.add(inst);
+  }
+
+  // ---------- درخت‌های واحه (اینستنس — خوشه‌ای کنار وادی‌ها) ----------
+  _buildTrees(scene, quality) {
+    const count = quality.trees || 0;
+    if (count <= 0) return;
+    const trunkGeo = new THREE.CylinderGeometry(0.35, 0.55, 6, 5);
+    const crownGeo = new THREE.SphereGeometry(3.2, 6, 5);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c452e, roughness: 1, flatShading: true });
+    const crownMat = new THREE.MeshStandardMaterial({ color: 0x4a6b35, roughness: 1, flatShading: true });
+    const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, count);
+    const crowns = new THREE.InstancedMesh(crownGeo, crownMat, count);
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const pos = new THREE.Vector3();
+    const scl = new THREE.Vector3();
+
+    // خوشه واحه‌ها: جایی که وادی عمیق است
+    const clusters = [];
+    for (let c = 0; c < 26; c++) {
+      const x = (Math.random() * 2 - 1) * this.half * 0.8;
+      const z = (Math.random() * 2 - 1) * this.half * 0.8;
+      const nx = (x / this.size) * 46, nz = (z / this.size) * 46;
+      const wadi = fbm(this.noise, nx * 1.4 + 51, nz * 1.4 + 17, 3);
+      const h = this._baseHeight(x, z);
+      if (h > 40 && h < 130 && wadi < -0.1) clusters.push([x, z]);
+    }
+    if (!clusters.length) clusters.push([BASES.friendly.x + 1600, BASES.friendly.z + 900]);
+
+    let placed = 0, guard = 0;
+    while (placed < count && guard++ < count * 10) {
+      const cl = clusters[(Math.random() * clusters.length) | 0];
+      const x = cl[0] + (Math.random() * 2 - 1) * 260;
+      const z = cl[1] + (Math.random() * 2 - 1) * 260;
+      if (Math.hypot(x - BASES.friendly.x, z - BASES.friendly.z) < 1000) continue;
+      if (Math.hypot(x - BASES.enemy.x, z - BASES.enemy.z) < 1000) continue;
+      const h = this._baseHeight(x, z);
+      if (h > 130 || h < 26) continue;
+      const s = 0.7 + Math.random() * 0.9;
+      pos.set(x, h + 3 * s, z);
+      scl.set(s, s, s);
+      q.setFromEuler(new THREE.Euler(0, Math.random() * 6.28, 0));
+      m4.compose(pos, q, scl);
+      trunks.setMatrixAt(placed, m4);
+      pos.y = h + 6.4 * s;
+      scl.set(s * (0.8 + Math.random() * 0.4), s * (0.7 + Math.random() * 0.5), s * (0.8 + Math.random() * 0.4));
+      m4.compose(pos, q, scl);
+      crowns.setMatrixAt(placed, m4);
+      placed++;
+    }
+    trunks.count = placed;
+    crowns.count = placed;
+    trunks.castShadow = crowns.castShadow = true;
+    scene.add(trunks, crowns);
   }
 
   // ---------- بیس متفقین: باند + سکو + چراغ ----------

@@ -31,8 +31,16 @@
   ],
   "missiles": [
     {
+      "name": "R-27ER",
+      "type": "sarh",
+      "count": 4,
+      "range": 26000
+    },
+    {
       "name": "R-73",
-      "count": 6
+      "type": "ir",
+      "count": 4,
+      "range": 9000
     }
   ],
   "bombs": 4,
@@ -58,5 +66,10 @@
     "sideStick": false,
     "mfds": 3
   },
-  "hp": 164
+  "hp": 164,
+  "radar": {
+    "range": 110000,
+    "gimbal": 60
+  },
+  "rcs": 6
 }

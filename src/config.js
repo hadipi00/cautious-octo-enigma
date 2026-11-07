@@ -16,22 +16,22 @@ export const BASES = {
 export const QUALITY = {
   low: {
     label: 'کم',    pixelCap: 1.0,  antialias: false, shadows: false, shadowSize: 512,
-    fogNear: 1500,  fogFar: 9500,   terrainSeg: 256,  clouds: 10,  rocks: 60,
+    fogNear: 1500,  fogFar: 9500,   terrainSeg: 256,  clouds: 10,  rocks: 60,   trees: 0,
     maxParticles: 250, autoRes: true,
   },
   medium: {
     label: 'متوسط', pixelCap: 1.25, antialias: true,  shadows: true,  shadowSize: 1024,
-    fogNear: 2500,  fogFar: 15000,  terrainSeg: 340,  clouds: 18,  rocks: 120,
+    fogNear: 2500,  fogFar: 15000,  terrainSeg: 340,  clouds: 18,  rocks: 120,  trees: 140,
     maxParticles: 500, autoRes: true,
   },
   high: {
     label: 'بالا',  pixelCap: 1.5,  antialias: true,  shadows: true,  shadowSize: 2048,
-    fogNear: 3200,  fogFar: 21000,  terrainSeg: 420,  clouds: 26,  rocks: 200,
+    fogNear: 3200,  fogFar: 21000,  terrainSeg: 420,  clouds: 26,  rocks: 200,  trees: 300,
     maxParticles: 900, autoRes: true,
   },
   ultra: {
     label: 'فوق',   pixelCap: 2.0,  antialias: true,  shadows: true,  shadowSize: 4096,
-    fogNear: 4200,  fogFar: 27000,  terrainSeg: 512,  clouds: 38,  rocks: 320,
+    fogNear: 4200,  fogFar: 27000,  terrainSeg: 512,  clouds: 38,  rocks: 320,  trees: 480,
     maxParticles: 1600, autoRes: false,
   },
 };
@@ -51,24 +51,35 @@ export const SIM = {
   stallBuffet: 0.35,
 };
 
-// تسلیحات (مشترک بین جنگنده‌ها؛ تعدادها در JSON هر جنگنده)
+// تسلیحات — موشک‌ها سه نوع: IR حرارتی، SARH نیمه‌فعال راداری، ARH فعال راداری
 export const WEAPONS = {
   gunMv: 1050,           // سرعت دهانه توپ
   gunDmg: 16,
-  missileSpeed: 980,
-  missileTurn: 3.2,      // rad/s
-  missileDmg: 85,
-  missileLife: 14,
+  lockCone: 25,          // درجه — کون قفل حرارتی/تخصیص
+  lockTime: 1.1,
+  flareDecoyChance: 0.75,
+  flareLife: 4.2,
+  chaffDecoyChance: 0.55,
+  chaffLife: 3.0,
+
+  // مشخصات هر نوع موشک (قابل بازنویسی در JSON هر جنگنده)
+  MSL: {
+    ir:   { speed: 850,  turn: 4.4, dmg: 70,  life: 14, motor: 3.2 },
+    sarh: { speed: 1050, turn: 3.0, dmg: 95,  life: 26, motor: 4.5 },
+    arh:  { speed: 1200, turn: 3.4, dmg: 110, life: 34, motor: 6.0 },
+  },
+  activeRadarRange: 12000,  // برد فعال‌شدن جوینده ARH
+  loftRange: 7000,          // بالاتر از این برد، موشک راداری اول اوج می‌گیرد
+  notchCos: 0.45,           // ناتچینگ: سرعت هدف عمود بر خط دید → شکستن قفل
+  notchMinRange: 3000,      // ناتچینگ فقط دور از فعال‌شدن جوینده
+  sarhGraceT: 0.7,          // تحمل قطع روشنایی SARH (ثانیه)
+
   bombDmg: 140,
   bombRadius: 60,
   rocketSpeed: 620,
   rocketDmg: 45,
   rocketLife: 6,
-  lockCone: 25,          // درجه
   lockRange: 9000,
-  lockTime: 1.1,
-  flareDecoyChance: 0.75,
-  flareLife: 4.2,
   samRange: 5200,
   samReload: 9,
   aaaRange: 2300,
@@ -81,7 +92,7 @@ export const SCORE = {
   landingBonus: 250,
 };
 
-const LS_KEY = 'airdom.settings.v2';
+const LS_KEY = 'airdom.settings.v3';
 export function loadSettings() {
   try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; }
 }

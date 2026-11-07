@@ -16,6 +16,7 @@ import { HUD } from './ui/hud.js';
 import { Menu } from './ui/menu.js';
 import { GameAudio } from './audio/engine.js';
 import { NetClient } from './net/client.js';
+import { simcore } from './wasm/simcore.js';
 import { damp, clamp, lerp } from './utils.js';
 
 const _off = new THREE.Vector3(), _aim = new THREE.Vector3(), _axis = new THREE.Vector3();
@@ -74,6 +75,9 @@ export class Game {
     this._wreckT = 0;
     this.aircraft = [];
     this.player = null;
+    this.wasm = simcore;           // هسته WASM (وضعیت: ok/fallback)
+    this.rwr = { lock: [], search: [], msl: null, sam: [] };  // هشداردهنده راداری
+    this._rwrT = 0;
     this.camMode = 0;
     this.camPos = new THREE.Vector3(0, 500, 1200);
     this.camAim = new THREE.Vector3();
@@ -151,6 +155,10 @@ export class Game {
       this._spawnAlly(2);
       this._spawnWave(2);
       this.hud.banner('نبرد تیمی — با متحدانت در حالتن');
+    } else if (type === 'bvr') {
+      this.player.spawnAir(1500, 90, -2600, 0);
+      this._spawnBvr(4);
+      this.hud.banner('نبرد فراتر از دید — با رادار (N) قفل کن و موشک راداری شلیک کن', 6000);
     } else if (type === 'air') {
       this.player.spawnAir(1500, 90, -2400, 0);
       this._spawnWave(1);
@@ -180,6 +188,29 @@ export class Game {
     ac.ai = new PilotAI(ac, { skill });
     this.aircraft.push(ac);
     return ac;
+  }
+
+  // ---------- مأموریت BVR: دشمنان خیلی دور، رو در رو ----------
+  _spawnBvr(n) {
+    this.wave = 1;
+    // فقط جت‌هایی که موشک راداری دارند (نبرد فراتر از برد دید واقعی)
+    const roster = Object.keys(this.specs).filter(k => {
+      const s = this.specs[k];
+      return !!s.radar && (s.missiles || []).some(m => m.type && m.type !== 'ir');
+    });
+    const pool = roster.length ? roster : Object.keys(this.specs);
+    const pz = this.player ? this.player.st.pos.z : -2600;
+    for (let i = 0; i < n; i++) {
+      const pos = new THREE.Vector3(
+        (i - (n - 1) / 2) * 1800 + (Math.random() - 0.5) * 900,
+        3400 + Math.random() * 1400,
+        pz + 21000 + Math.random() * 5000
+      );
+      const id = pool[(Math.random() * pool.length) | 0];
+      // رو به جنوب (به سمت بازیکن): heading 180
+      this._makeEnemy(id, pos, 180, 0.95 + Math.random() * 0.2);
+    }
+    this.hud.banner(`${n} جت دشمن در ~۲۵ کیلومتری شمالی — به سمتت می‌آیند`, 5000);
   }
 
   _spawnWave(n) {
@@ -312,7 +343,7 @@ export class Game {
     // تست خودکار — قبل از به‌روزرسانی هواپیماها تا ورودی‌هایش اعمال شوند
     if (this._autotest) this._autotestStep(dt);
 
-    // هواپیماها: AI + فیزیک
+    // هواپیماها: رادار + AI + فیزیک
     const ctx = {
       aircraft: this.aircraft,
       props: this.props,
@@ -321,6 +352,7 @@ export class Game {
     };
     for (const ac of this.aircraft) {
       ac.distToPlayer = ac.st.pos.distanceTo(p.st.pos);
+      if (ac.radar) ac.radar.update(dt, ctx);
     }
     for (const ac of this.aircraft) {
       if (ac.ai) ac.ai.update(dt, ctx);
@@ -350,12 +382,14 @@ export class Game {
 
     this._updateCamera(dt);
     this.audio.updateEngine(p.st);
-    this.audio.setRwr(this.projectiles.missileInbound(p));
+    this._updateRwr(dt);
     this.hud.update(dt, this);
 
-    // موج بعدی
+    // موج بعدی / پایان مأموریت‌ها
     const redAlive = this.aircraft.filter(a => a.team === 'red' && a.alive).length;
-    if ((this.missionType === 'air' || this.missionType === 'team') && redAlive === 0 && !this._nextWave) {
+    if (this.missionType === 'bvr' && redAlive === 0 && !this._nextWave) {
+      this._endMission(true, 'همه دشمنان بی‌آر سرنگون شدند!');
+    } else if ((this.missionType === 'air' || this.missionType === 'team') && redAlive === 0 && !this._nextWave) {
       this._nextWave = true;
       this._waveTimer = 6;
       if (this.wave > 0) this.hud.banner('موج پاکسازی شد — موج بعدی تا ۶ ثانیه…');
@@ -372,6 +406,49 @@ export class Game {
     if (this.net.active) this.net.update(dt);
   }
 
+  // ---------- RWR: هشداردهنده راداری بازیکن ----------
+  _updateRwr(dt) {
+    this._rwrT -= dt;
+    if (this._rwrT > 0) return;
+    this._rwrT = 0.15;
+    const p = this.player;
+    const rwr = this.rwr;
+    rwr.lock.length = 0; rwr.search.length = 0; rwr.sam.length = 0;
+    const pf = _tmp.set(0, 0, 1).applyQuaternion(p.st.quat);
+    for (const ac of this.aircraft) {
+      if (!ac.alive || ac.team === 'blue' || !ac.radar) continue;
+      const d = ac.st.pos.distanceTo(p.st.pos);
+      if (d > ac.radar.range * 1.1) continue;
+      const bearing = Math.atan2(ac.st.pos.x - p.st.pos.x, ac.st.pos.z - p.st.pos.z);
+      if (ac.lockTarget === p && ac.lockSource === 'radar' && ac.lockT > 0.4) {
+        rwr.lock.push(bearing);
+      } else {
+        // اسکن رادار دشمن به سمت ما؟
+        const toUs = _aim.copy(p.st.pos).sub(ac.st.pos).normalize();
+        const f = _axis.set(0, 0, 1).applyQuaternion(ac.st.quat);
+        if (f.dot(toUs) > Math.cos(ac.radar.gimbal + 0.35)) {
+          rwr.search.push(bearing);
+        }
+      }
+    }
+    // SAMها
+    if (this.groundDefense.enabled) {
+      for (const site of this.props.samSites) {
+        if (site.destroyed) continue;
+        if (site.pos.distanceTo(p.st.pos) < 6500) {
+          rwr.sam.push(Math.atan2(site.pos.x - p.st.pos.x, site.pos.z - p.st.pos.z));
+        }
+      }
+    }
+    const inbound = this.projectiles.missileInboundInfo(p);
+    rwr.msl = inbound ? { kind: inbound.kind, dist: inbound.dist } : null;
+    // صدا: اولویت MSL > LOCK > SEARCH
+    if (rwr.msl) this.audio.setRwrMode(3);
+    else if (rwr.lock.length) this.audio.setRwrMode(2);
+    else if (rwr.search.length || rwr.sam.length) this.audio.setRwrMode(1);
+    else this.audio.setRwrMode(0);
+  }
+
   _action(code) {
     const c = this.controls;
     const p = this.player;
@@ -383,8 +460,17 @@ export class Game {
       case 'KeyB': p.dropBomb(); break;
       case 'KeyR': p.fireRockets(); break;
       case 'KeyC': p.dropFlares(); break;
+      case 'KeyN':
+        if (p.radar) {
+          const m = p.radar.cycleMode();
+          this.hud.setCamLabel('RADAR: ' + m.toUpperCase());
+          this.audio.uiClick();
+        } else {
+          this.hud.setCamLabel('NO RADAR');
+        }
+        break;
       case 'Digit1': this.camMode = 0; this.hud.setCamLabel('COCKPIT'); break;
-      case 'Digit2': this.camMode = 0; this.hud.setCamLabel('CHASE'); break;
+      case 'Digit2': this.camMode = 1; this.hud.setCamLabel('CHASE'); break;
       case 'Digit3': this.camMode = 2; this.hud.setCamLabel('FAR'); break;
       case 'F3': this.hud.toggleF3(); break;
       case 'KeyT': this.net.chatToggle && this.net.chatToggle(); break;
@@ -503,6 +589,8 @@ export class Game {
     if (p && p.st.alive) {
       p.input.throttle = 1;
       p.input.ab = this._t > 2;
+      // رادار را در STT بگذار تا مأموریت BVR هم قفل راداری را تست کند
+      if (this._t > 3 && p.radar) p.radar.mode = 'stt';
       if (this._t > 3 && this.missionType !== 'free') {
         let e = null, bd = 1e12;
         for (const ac of this.aircraft) {
@@ -515,7 +603,7 @@ export class Game {
           const want = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), _tmp);
           p.st.quat.slerp(want, Math.min(1, 4 * dt)).normalize();
           p.input.fire = true;
-          if (this._t > 6 && p.lockT >= 1.1 && p.missiles === p.spec.missiles[0].count) p.fireMissile();
+          if (this._t > 6 && p.lockT >= 1.1 && p.missiles > 0) p.fireMissile();
         }
       } else {
         p.input.fire = false;
@@ -524,13 +612,20 @@ export class Game {
     for (const mark of [3, 6, 9, 12, 20, 28]) {
       if (this._t >= mark && !this._shots.includes(mark)) {
         this._shots.push(mark);
-        console.log(`AUTOTEST t=${this._t.toFixed(1)} v=${Math.round(this.player.st.V)} pos=${this.player.st.pos.x | 0},${this.player.st.pos.y | 0},${this.player.st.pos.z | 0} kills=${this.kills} enemies=${this.aircraft.filter(a => a.team === 'red' && a.alive).length}`);
+        const st = this.mslStationInfo();
+        console.log(`AUTOTEST t=${this._t.toFixed(1)} v=${Math.round(this.player.st.V)} pos=${this.player.st.pos.x | 0},${this.player.st.pos.y | 0},${this.player.st.pos.z | 0} kills=${this.kills} enemies=${this.aircraft.filter(a => a.team === 'red' && a.alive).length} wasm=${this.wasm.ok} radar=${this.player.radar ? this.player.radar.mode + '/' + this.player.radar._pool.filter(t => t.detected).length + 'trk' : 'none'} msl=${st}`);
       }
     }
     if (this._t > 34) {
-      console.log(`AUTOTEST-DONE kills=${this.kills} score=${this.score}`);
+      console.log(`AUTOTEST-DONE kills=${this.kills} score=${this.score} wasm=${this.wasm.ok}`);
       setTimeout(() => window.close(), 300);
     }
+  }
+
+  mslStationInfo() {
+    const p = this.player;
+    if (!p) return '-';
+    return p.mslStations.map(s => `${s.type}:${s.left}`).join(',');
   }
 
   _screenshot(name) {

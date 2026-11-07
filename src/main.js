@@ -1,13 +1,21 @@
-// نقطه ورود — بارگذاری ۶ جنگنده و راه‌اندازی
+// نقطه ورود — بارگذاری ۱۲ جنگنده + هسته WASM و راه‌اندازی
 import { Game } from './game.js';
 import { loadSettings } from './config.js';
+import { simcore } from './wasm/simcore.js';
 
 const canvas = document.getElementById('c');
 const params = new URLSearchParams(location.search);
 
-const PLANE_IDS = ['f16c', 'f14b', 'su27s', 'mig29a', 'mirage2000c', 'jas39c'];
+const PLANE_IDS = [
+  'f16c', 'f15c', 'f14b', 'f4e', 'a10a',
+  'mig29a', 'mig21bis', 'mig23ml', 'su27s', 'su25',
+  'mirage2000c', 'jas39c',
+];
 
 async function boot() {
+  // هسته محاسبات سنگین WASM — اگر لود نشد، بازی با fallback JS اجرا می‌شود
+  await simcore.init();
+
   const specs = {};
   await Promise.all(PLANE_IDS.map(async (id) => {
     specs[id] = await (await fetch(`./src/aircraft/${id}.json`)).json();

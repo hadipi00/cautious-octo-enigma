@@ -31,8 +31,16 @@
   ],
   "missiles": [
     {
+      "name": "Super 530D",
+      "type": "sarh",
+      "count": 2,
+      "range": 22000
+    },
+    {
       "name": "Magic II",
-      "count": 4
+      "type": "ir",
+      "count": 2,
+      "range": 8000
     }
   ],
   "bombs": 2,
@@ -58,5 +66,10 @@
     "sideStick": false,
     "mfds": 1
   },
-  "hp": 75
+  "hp": 75,
+  "radar": {
+    "range": 80000,
+    "gimbal": 60
+  },
+  "rcs": 4
 }

@@ -1,0 +1,13 @@
+{
+  "name": "airdom-native",
+  "private": true,
+  "description": "WAT → WASM build for AIRDOM simcore (heavy compute core)",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test.mjs"
+  },
+  "devDependencies": {
+    "wabt": "^1.0.36"
+  }
+}

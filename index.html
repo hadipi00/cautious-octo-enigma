@@ -42,6 +42,10 @@
   #velMarker::after{content:"";position:absolute;top:50%;left:-12px;right:-12px;height:2px;background:var(--hud);transform:translateY(-50%);opacity:.7}
   #tgtBox{position:absolute;width:40px;height:40px;border:2px solid var(--hudRed);transform:translate(-50%,-50%);display:none}
   #tgtInfo{position:absolute;transform:translate(-50%,0);color:var(--hudRed);font-size:12px;text-align:center;display:none;white-space:pre}
+  #pipper{position:absolute;width:14px;height:14px;border:2px solid #fff;border-radius:50%;
+          transform:translate(-50%,-50%);display:none;box-shadow:0 0 4px rgba(0,0,0,.8)}
+  #pipper::after{content:"";position:absolute;left:50%;top:-9px;width:2px;height:6px;background:#fff;transform:translateX(-50%)}
+  #rwr{position:absolute;right:3.5%;bottom:17%;width:150px;height:150px;opacity:.92;display:block}
   #vignette{position:fixed;inset:0;pointer-events:none;
             background:radial-gradient(ellipse at center,transparent 38%,rgba(12,0,0,.98) 100%);opacity:0}
   #dmg{position:fixed;inset:0;pointer-events:none;
@@ -119,6 +123,8 @@
   <div id="velMarker"></div>
   <div id="tgtBox"></div>
   <div id="tgtInfo" class="hud-box"></div>
+  <div id="pipper"></div>
+  <canvas id="rwr" width="150" height="150"></canvas>
   <div id="camLabel"></div>
 </div>
 <div id="vignette"></div>
@@ -127,7 +133,7 @@
 <div id="menu">
   <div class="panel" id="menuPanel">
     <h1>AIRDOM</h1>
-    <div class="sub">شبیه‌ساز نبرد هوایی — نسخه ۱.۰</div>
+    <div class="sub">شبیه‌ساز نبرد هوایی — نسخه ۲.۰ «رادار و بی‌آر» — هسته WASM</div>
     <div id="loadMsg">در حال بارگذاری…</div>
     <div id="menuBody" class="hidden">
       <div id="hangar">
@@ -139,6 +145,7 @@
         <div id="hangarPrev"></div>
       </div>
       <button class="btn primary" id="btnAir">✈ برتری هوایی — موج‌های دشمن</button>
+      <button class="btn" id="btnBvr">📡 نبرد بی‌آر — رادار و موشک دوربرد (۲۵km)</button>
       <button class="btn" id="btnStrike">💥 حمله به بیس زمینی (SAM فعال)</button>
       <button class="btn" id="btnTeam">🤝 نبرد تیمی — با ۲ متحد</button>
       <button class="btn" id="btnFree">🛫 پرواز آزاد + فرود روی باند</button>
@@ -172,11 +179,12 @@
         <span><b>Q / E</b> — دُم</span>
         <span><b>W / S</b> — گاز</span>
         <span><b>Z</b> — افتربرنر</span>
+        <span><b>N</b> — حالت رادار (جستجو/TWS/قفل)</span>
         <span><b>Space / کلیک</b> — توپ</span>
-        <span><b>F</b> — موشک (با قفل)</span>
+        <span><b>F</b> — موشک (راداری/حرارتی خودکار)</span>
         <span><b>B</b> — بمب</span>
         <span><b>R</b> — راکت</span>
-        <span><b>C</b> — فلر</span>
+        <span><b>C</b> — فلر + چف</span>
         <span><b>G</b> — چرخ فرود</span>
         <span><b>V</b> — فلپ</span>
         <span><b>X</b> — ترمز هوایی</span>

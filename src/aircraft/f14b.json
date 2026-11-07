@@ -31,8 +31,16 @@
   ],
   "missiles": [
     {
+      "name": "AIM-54C",
+      "type": "arh",
+      "count": 4,
+      "range": 30000
+    },
+    {
       "name": "AIM-9M",
-      "count": 4
+      "type": "ir",
+      "count": 2,
+      "range": 8000
     }
   ],
   "bombs": 4,
@@ -58,5 +66,10 @@
     "sideStick": false,
     "mfds": 1
   },
-  "hp": 198
+  "hp": 198,
+  "radar": {
+    "range": 140000,
+    "gimbal": 65
+  },
+  "rcs": 9
 }

@@ -1,0 +1,76 @@
+{
+  "id": "f4e",
+  "name": "F-4E Phantom II",
+  "nation": "USA",
+  "role": "multirole",
+  "mass": 13700,
+  "fuelCap": 6000,
+  "thrustMil": 104600,
+  "thrustAB": 159200,
+  "burnMil": 2.3,
+  "burnAB": 10.5,
+  "wingArea": 49.2,
+  "wingSpan": 11.77,
+  "len": 19.2,
+  "CL0": 0.05,
+  "CLa": 4.2,
+  "aStall": 16,
+  "CD0": 0.028,
+  "kInd": 0.12,
+  "maxG": 7.5,
+  "rollRate": 200,
+  "pitchRate": 16,
+  "yawRate": 6,
+  "gearH": 2.4,
+  "bellyH": 1.35,
+  "guns": [
+    {
+      "name": "M61A1 VULCAN",
+      "ammo": 640
+    }
+  ],
+  "missiles": [
+    {
+      "name": "AIM-7E",
+      "type": "sarh",
+      "count": 4,
+      "range": 20000
+    },
+    {
+      "name": "AIM-9J",
+      "type": "ir",
+      "count": 4,
+      "range": 6000
+    }
+  ],
+  "bombs": 4,
+  "rockets": 0,
+  "flares": 48,
+  "chaff": 48,
+  "radar": {
+    "range": 70000,
+    "gimbal": 55
+  },
+  "rcs": 11,
+  "stats": {
+    "speed": 0.92,
+    "agility": 0.5,
+    "firepower": 0.8,
+    "armor": 0.8
+  },
+  "visual": {
+    "wingType": "swept",
+    "tailType": "twin",
+    "engines": 2,
+    "body": "#8d9299",
+    "accent": "#57616e",
+    "fusW": 1.2
+  },
+  "cockpit": {
+    "style": "west",
+    "panel": "#35393f",
+    "sideStick": false,
+    "mfds": 1
+  },
+  "hp": 115
+}

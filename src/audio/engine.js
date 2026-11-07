@@ -108,12 +108,27 @@ export class GameAudio {
   }
 
   setRwr(active) {
-    this._rwr = active;
-    if (!this.ok || !active) return;
+    this.setRwrMode(active ? 2 : 0);
+  }
+
+  // حالت‌های RWR: 0 ساکت، 1 جستجو، 2 قفل، 3 موشک شلیک‌شده
+  setRwrMode(mode) {
+    this._rwrMode = mode;
+    if (!this.ok || !mode) return;
     this._rwrT -= 1 / 60;
     if (this._rwrT <= 0) {
-      this._rwrT = 0.32;
-      this.beep(650, 0.1, 0.22);
+      if (mode === 3) {
+        // وای موشک: دو نُت متناوب تند
+        this._rwrT = 0.13;
+        this._mslAlt = !this._mslAlt;
+        this.beep(this._mslAlt ? 720 : 1180, 0.12, 0.25);
+      } else if (mode === 2) {
+        this._rwrT = 0.2;
+        this.beep(1150, 0.16, 0.22);
+      } else {
+        this._rwrT = 0.85;
+        this.beep(440, 0.1, 0.13);
+      }
     }
   }
 

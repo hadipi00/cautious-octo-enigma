@@ -1,0 +1,68 @@
+{
+  "id": "su25",
+  "name": "Su-25 Frogfoot",
+  "nation": "RUSSIA",
+  "role": "attack",
+  "mass": 9800,
+  "fuelCap": 4000,
+  "thrustMil": 80400,
+  "thrustAB": 88300,
+  "burnMil": 1.5,
+  "burnAB": 5.5,
+  "wingArea": 30.1,
+  "wingSpan": 14.36,
+  "len": 15.53,
+  "CL0": 0.07,
+  "CLa": 4.6,
+  "aStall": 22,
+  "CD0": 0.032,
+  "kInd": 0.12,
+  "maxG": 6.5,
+  "rollRate": 180,
+  "pitchRate": 14,
+  "yawRate": 8,
+  "gearH": 2.3,
+  "bellyH": 1.25,
+  "guns": [
+    {
+      "name": "GSh-30-2",
+      "ammo": 250
+    }
+  ],
+  "gunDmg": 22,
+  "missiles": [
+    {
+      "name": "R-60M",
+      "type": "ir",
+      "count": 2,
+      "range": 5000
+    }
+  ],
+  "bombs": 8,
+  "rockets": 64,
+  "flares": 128,
+  "chaff": 128,
+  "radar": null,
+  "rcs": 10,
+  "stats": {
+    "speed": 0.6,
+    "agility": 0.55,
+    "firepower": 0.85,
+    "armor": 1.0
+  },
+  "visual": {
+    "wingType": "swept",
+    "tailType": "single",
+    "engines": 1,
+    "body": "#6d7462",
+    "accent": "#46503e",
+    "fusW": 1.1
+  },
+  "cockpit": {
+    "style": "russia",
+    "panel": "#26403a",
+    "sideStick": false,
+    "mfds": 1
+  },
+  "hp": 150
+}

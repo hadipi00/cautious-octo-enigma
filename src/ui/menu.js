@@ -58,6 +58,7 @@ export class Menu {
     const sel = () => car.dataset.id;
     document.getElementById('btnFree').onclick = () => { g.audio.init(); g.startMission('free', sel()); };
     document.getElementById('btnAir').onclick = () => { g.audio.init(); g.startMission('air', sel()); };
+    document.getElementById('btnBvr').onclick = () => { g.audio.init(); g.startMission('bvr', sel()); };
     document.getElementById('btnStrike').onclick = () => { g.audio.init(); g.startMission('strike', sel()); };
     document.getElementById('btnTeam').onclick = () => { g.audio.init(); g.startMission('team', sel()); };
     document.getElementById('btnMp').onclick = () => { g.audio.init(); this._openMp(); };

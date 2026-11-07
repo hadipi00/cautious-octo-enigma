@@ -31,8 +31,16 @@
   ],
   "missiles": [
     {
+      "name": "AIM-120C",
+      "type": "arh",
+      "count": 4,
+      "range": 18000
+    },
+    {
       "name": "IRIS-T",
-      "count": 4
+      "type": "ir",
+      "count": 2,
+      "range": 10000
     }
   ],
   "bombs": 4,
@@ -58,5 +66,10 @@
     "sideStick": true,
     "mfds": 3
   },
-  "hp": 80
+  "hp": 80,
+  "radar": {
+    "range": 90000,
+    "gimbal": 60
+  },
+  "rcs": 3
 }

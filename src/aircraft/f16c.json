@@ -34,9 +34,15 @@
   ],
   "missiles": [
     {
+      "name": "AIM-120C",
+      "type": "arh",
+      "count": 2,
+      "range": 18000
+    },
+    {
       "name": "AIM-9L",
       "type": "ir",
-      "count": 4,
+      "count": 2,
       "range": 8000
     }
   ],
@@ -57,5 +63,10 @@
     "sideStick": true,
     "mfds": 2
   },
-  "hp": 86
+  "hp": 86,
+  "radar": {
+    "range": 90000,
+    "gimbal": 60
+  },
+  "rcs": 4
 }

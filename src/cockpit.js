@@ -180,7 +180,7 @@ function drawStaticPanel(g, panelCol, west, glow) {
   }
 }
 
-// ---------- MFD رادار (زنده) ----------
+// ---------- MFD رادار (زنده — از ترک‌های واقعی رادار) ----------
 function drawRadarMfd(mfd, aircraft, game, west, glow) {
   const g = mfd.ctx;
   const W = 256;
@@ -202,29 +202,60 @@ function drawRadarMfd(mfd, aircraft, game, west, glow) {
     g.fillStyle = grad;
     g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
   }
-  // جت خودی (مرکز) + خط بردار سرعت
+  // جت خودی (مرکز)
   g.fillStyle = glowHex;
   g.fillRect(cx - 2, cy - 10, 4, 20);
   g.fillRect(cx - 10, cy - 2, 20, 4);
-  // نشانگر قفل و برد
-  if (game && game.player === aircraft) {
-    for (const e of game.aircraft) {
-      if (!e.alive || e.team === aircraft.team) continue;
-      _mfdV.copy(e.st.pos).sub(aircraft.st.pos);
-      _mfdQ.copy(aircraft.st.quat).invert();
-      _mfdV.applyQuaternion(_mfdQ);
-      const rx = _mfdV.x, rz = _mfdV.z; // +z جلو → بالا صفحه
-      const dist = Math.hypot(rx, rz);
-      if (dist > 12000) continue;
-      const px = cx + (rx / 12000) * R, py = cy - (rz / 12000) * R;
-      if (Math.hypot(px - cx, py - cy) > R) continue;
-      g.strokeStyle = aircraft.lockTarget === e ? '#ffffff' : '#ff5050';
-      g.lineWidth = 2;
-      g.strokeRect(px - 6, py - 6, 12, 12);
+
+  const radar = aircraft.radar;
+  const dispRange = radar ? Math.min(radar.range, 40000) : 12000;
+  const scale = R / dispRange;
+  _mfdQ.copy(aircraft.st.quat).invert();
+
+  const plot = (e, detected, closure) => {
+    _mfdV.copy(e.st.pos).sub(aircraft.st.pos);
+    _mfdV.applyQuaternion(_mfdQ);
+    const rx = _mfdV.x, rz = _mfdV.z; // +z جلو → بالا صفحه
+    let px = cx + rx * scale, py = cy - rz * scale;
+    const dc = Math.hypot(px - cx, py - cy);
+    if (dc > R) return;
+    const locked = aircraft.lockTarget === e;
+    g.globalAlpha = detected ? 1 : 0.3;
+    g.strokeStyle = locked ? '#ffffff' : '#ff5050';
+    g.lineWidth = 2;
+    g.strokeRect(px - 6, py - 6, 12, 12);
+    // بردار نسبی سرعت (تصویر سرعت هدف در قاب خودی)
+    if (detected && e.st.vel.lengthSq() > 100) {
+      _mfdV.copy(e.st.vel).applyQuaternion(_mfdQ).multiplyScalar(0.04);
+      g.beginPath();
+      g.moveTo(px, py);
+      g.lineTo(px + _mfdV.x, py - _mfdV.z);
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+  };
+
+  if (radar) {
+    for (const tr of radar._pool) {
+      if (!tr.ac || !tr.ac.alive) continue;
+      plot(tr.ac, tr.detected, tr.closure);
     }
     g.fillStyle = '#9fb2ca'; g.font = '13px monospace';
     const lt = aircraft.lockTarget;
-    g.fillText(lt && aircraft.lockT >= 1.1 ? 'LOCKED' : lt ? 'LOCKING' : 'SEARCH', 12, 22);
+    const ready = lt && (aircraft.lockT >= (radar.mode === 'stt' ? 0.4 : 1.1));
+    g.fillText(radar.mode.toUpperCase() + (ready ? ' LOCK' : lt ? ' DESIG' : ''), 12, 22);
+    g.fillText(`RNG ${(dispRange / 1000) | 0}KM`, 12, W - 12);
+  } else {
+    // بدون رادار — فقط دید چشمی/IR
+    if (game && game.player === aircraft) {
+      for (const e of game.aircraft) {
+        if (!e.alive || e.team === aircraft.team) continue;
+        if (e.st.pos.distanceTo(aircraft.st.pos) > 12000) continue;
+        plot(e, true, 0);
+      }
+    }
+    g.fillStyle = '#9fb2ca'; g.font = '13px monospace';
+    g.fillText('IR ONLY', 12, 22);
     g.fillText('RNG 12KM', 12, W - 12);
   }
   mfd.tex.needsUpdate = true;
@@ -252,7 +283,7 @@ function drawStatusMfd(mfd, aircraft, west, glow) {
   g.fillStyle = '#cfe3ff'; g.font = '15px monospace';
   g.fillText(`GUN ${aircraft.gunAmmo}`, 12, 150);
   g.fillText(`MSL ${aircraft.missiles}  BMB ${aircraft.bombs}`, 12, 172);
-  g.fillText(`RKT ${aircraft.rockets}  FLR ${aircraft.flares}`, 12, 194);
+  g.fillText(`RKT ${aircraft.rockets}  FLR ${aircraft.flares}  CHF ${aircraft.chaff}`, 12, 194);
   g.fillText(`MACH ${st.mach.toFixed(2)}  ALT ${Math.round(st.pos.y)}`, 12, 220);
   if (st.stalled) { g.fillStyle = '#ff5050'; g.fillText('** STALL **', 12, 244); }
   mfd.tex.needsUpdate = true;

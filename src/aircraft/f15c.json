@@ -1,0 +1,76 @@
+{
+  "id": "f15c",
+  "name": "F-15C Eagle",
+  "nation": "USA",
+  "role": "air superiority",
+  "mass": 12700,
+  "fuelCap": 6100,
+  "thrustMil": 130400,
+  "thrustAB": 211400,
+  "burnMil": 2.0,
+  "burnAB": 9.0,
+  "wingArea": 56.5,
+  "wingSpan": 13.05,
+  "len": 19.43,
+  "CL0": 0.04,
+  "CLa": 4.4,
+  "aStall": 17,
+  "CD0": 0.023,
+  "kInd": 0.11,
+  "maxG": 9,
+  "rollRate": 250,
+  "pitchRate": 20,
+  "yawRate": 7,
+  "gearH": 2.4,
+  "bellyH": 1.3,
+  "guns": [
+    {
+      "name": "M61A1 VULCAN",
+      "ammo": 940
+    }
+  ],
+  "missiles": [
+    {
+      "name": "AIM-7M",
+      "type": "sarh",
+      "count": 4,
+      "range": 26000
+    },
+    {
+      "name": "AIM-9L",
+      "type": "ir",
+      "count": 4,
+      "range": 8000
+    }
+  ],
+  "bombs": 2,
+  "rockets": 0,
+  "flares": 56,
+  "chaff": 64,
+  "radar": {
+    "range": 120000,
+    "gimbal": 65
+  },
+  "rcs": 8,
+  "stats": {
+    "speed": 0.95,
+    "agility": 0.75,
+    "firepower": 0.95,
+    "armor": 0.85
+  },
+  "visual": {
+    "wingType": "swept",
+    "tailType": "twin",
+    "engines": 2,
+    "body": "#7a8288",
+    "accent": "#46505c",
+    "fusW": 1.15
+  },
+  "cockpit": {
+    "style": "west",
+    "panel": "#2e343b",
+    "sideStick": false,
+    "mfds": 2
+  },
+  "hp": 120
+}

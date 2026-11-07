@@ -1,15 +1,25 @@
 // ============================================================
-// پرتابه‌ها — توپ، موشک هدایت‌شونده، بمب، راکت، فلر (همه پول‌شده)
-// برخورد: پاره‌خط-کره برای توپ، شعاع برای بقیه
+// پرتابه‌ها — توپ، موشک (IR/SARH/ARH)، بمب، راکت، فلر، چف
+// همه پول‌شده (صفر GC حین بازی)
+// انتگرال‌گیری بالستیک توپ/بمب/راکت/موشک کور → هسته WASM (simcore)
+// الکترونیک: ناتچینگ، چف، روشنایی SARH، جوینده فعال ARH، فلر برای IR
 // ============================================================
 import * as THREE from 'three';
 import { WEAPONS } from '../config.js';
+import { simcore } from '../wasm/simcore.js';
+
+const MAX_BULLETS = 320, MAX_MISSILES = 44, MAX_DROPS = 28, MAX_Flares = 48, MAX_CHAFFS = 36;
 
 export class Projectiles {
   constructor(scene, effects, audio) {
     this.scene = scene;
     this.effects = effects;
     this.audio = audio;
+    this.sim = simcore;   // هسته WASM (در صورت نبود → fallback JS)
+
+    // ---------- اسکرچ بالستیک (پیش‌تخصیص) ----------
+    this._bArr = new Float64Array(MAX_BULLETS * 6);
+    this._dArr = new Float64Array(MAX_DROPS * 6);
 
     // ---------- توپ ----------
     this.bullets = [];
@@ -17,8 +27,8 @@ export class Projectiles {
     const bGeoE = new THREE.BoxGeometry(0.18, 0.18, 8);
     const matF = _addMat(0xffe680);
     const matE = _addMat(0xff7040);
-    for (let i = 0; i < 260; i++) {
-      const enemy = i >= 130;
+    for (let i = 0; i < MAX_BULLETS; i++) {
+      const enemy = i >= MAX_BULLETS / 2;
       const mi = new THREE.Mesh(enemy ? bGeoE : bGeoF, enemy ? matE : matF);
       mi.visible = false;
       mi.frustumCulled = false;
@@ -35,7 +45,7 @@ export class Projectiles {
     const mMat = new THREE.MeshStandardMaterial({ color: 0xd8d8dc, roughness: 0.4, metalness: 0.5 });
     const flameGeo = new THREE.ConeGeometry(0.3, 2.4, 8);
     const flameMat = _addMat(0xffb050);
-    for (let i = 0; i < 28; i++) {
+    for (let i = 0; i < MAX_MISSILES; i++) {
       const g = new THREE.Group();
       const body = new THREE.Mesh(mGeo, mMat);
       body.rotation.x = Math.PI / 2;
@@ -47,8 +57,10 @@ export class Projectiles {
       scene.add(g);
       this.missiles.push({
         node: g, pos: new THREE.Vector3(), vel: new THREE.Vector3(),
-        target: null, friendly: true, life: 0, motor: 0, turn: WEAPONS.missileTurn,
-        speed: WEAPONS.missileSpeed, dmg: WEAPONS.missileDmg, smokeT: 0, active: false,
+        target: null, friendly: true, life: 0, motor: 0,
+        turn: 3.2, speed: 980, dmg: 85, kind: 'ir',
+        guided: true, activeSeek: false, illumLostT: 0, lofted: false,
+        attacker: null, smokeT: 0, active: false,
       });
     }
 
@@ -57,8 +69,8 @@ export class Projectiles {
     const bombGeo = new THREE.CapsuleGeometry(0.35, 1.6, 4, 8);
     const rocketGeo = new THREE.CylinderGeometry(0.15, 0.15, 2.2, 6);
     const dark = new THREE.MeshStandardMaterial({ color: 0x50565c, roughness: 0.5, metalness: 0.5 });
-    for (let i = 0; i < 24; i++) {
-      const isBomb = i < 12;
+    for (let i = 0; i < MAX_DROPS; i++) {
+      const isBomb = i < MAX_DROPS / 2;
       const mesh = new THREE.Mesh(isBomb ? bombGeo : rocketGeo, dark);
       if (!isBomb) mesh.rotation.x = Math.PI / 2;
       mesh.visible = false;
@@ -73,7 +85,7 @@ export class Projectiles {
     this.flares = [];
     const flareMat = _addMat(0xffd070);
     const flareGeo = new THREE.SphereGeometry(0.5, 6, 4);
-    for (let i = 0; i < 48; i++) {
+    for (let i = 0; i < MAX_Flares; i++) {
       const node = new THREE.Mesh(flareGeo, flareMat);
       node.visible = false;
       scene.add(node);
@@ -82,10 +94,23 @@ export class Projectiles {
       });
     }
 
+    // ---------- چف (بازتاب راداری) ----------
+    this.chaffs = [];
+    const chaffMat = new THREE.MeshBasicMaterial({ color: 0xdde4ee, transparent: true, opacity: 0.8 });
+    const chaffGeo = new THREE.OctahedronGeometry(0.7, 0);
+    for (let i = 0; i < MAX_CHAFFS; i++) {
+      const node = new THREE.Mesh(chaffGeo, chaffMat);
+      node.visible = false;
+      scene.add(node);
+      this.chaffs.push({
+        node, pos: new THREE.Vector3(), vel: new THREE.Vector3(), life: 0, active: false,
+      });
+    }
+
     // کال‌بک‌ها (game وصل می‌کند)
-    this.onAircraftHit = null;   // (aircraft, dmg, attacker)
+    this.onAircraftHit = null;     // (aircraft, dmg, attacker)
     this.onGroundTargetHit = null; // (propsTarget, dmg)
-    this.onSamHit = null;        // (samSite, dmg)
+    this.onSamHit = null;          // (samSite, dmg)
   }
 
   // ---------- شلیک‌ها ----------
@@ -100,27 +125,38 @@ export class Projectiles {
     b.vel.copy(vel);
     b.node.visible = true;
     b.node.position.copy(pos);
-    b.node.lookAt(pos.clone().add(vel));
+    b.node.lookAt(_look.copy(pos).add(vel));
   }
 
+  // opts: { kind:'ir'|'sarh'|'arh', speed, turn, dmg, life, attacker, loft }
   launchMissile(pos, vel, target, friendly, opts = {}) {
     const m = this.missiles.find(x => !x.active);
-    if (!m) return;
+    if (!m) return null;
+    const kind = opts.kind || 'ir';
+    const base = WEAPONS.MSL[kind] || WEAPONS.MSL.ir;
     m.active = true;
     m.pos.copy(pos);
-    m.vel.copy(vel).setLength(Math.min(vel.length() + 150, 420));
+    m.vel.copy(vel).setLength(Math.min(vel.length() + 150, base.speed * 0.5));
     m.target = target;
     m.friendly = friendly;
-    m.life = opts.life || WEAPONS.missileLife;
-    m.motor = 3.2;
-    m.turn = opts.turn || WEAPONS.missileTurn;
-    m.speed = opts.speed || WEAPONS.missileSpeed;
-    m.dmg = opts.dmg || WEAPONS.missileDmg;
+    m.kind = kind;
+    m.guided = true;
+    m.activeSeek = false;
+    m.illumLostT = 0;
+    m.attacker = opts.attacker || null;
+    m.life = opts.life || base.life;
+    m.motor = base.motor;
+    m.turn = opts.turn || base.turn;
+    m.speed = opts.speed || base.speed;
+    m.dmg = opts.dmg || base.dmg;
+    m.lofted = !!opts.loft;
+    if (m.lofted) m.vel.y += 200;   // اوج اولیه برای انرژی (بی‌آر)
     m.smokeT = 0;
     m.node.visible = true;
     m.node.position.copy(pos);
-    m.node.lookAt(pos.clone().add(m.vel));
+    m.node.lookAt(_look.copy(pos).add(m.vel));
     if (this.audio) this.audio.missileLaunch(friendly);
+    return m;
   }
 
   dropBomb(pos, vel, dmg = WEAPONS.bombDmg) {
@@ -152,10 +188,25 @@ export class Projectiles {
       f.active = true;
       f.life = WEAPONS.flareLife;
       f.pos.copy(pos);
-      f.vel.copy(vel).multiplyScalar(0.45).add(new THREE.Vector3(
+      f.vel.copy(vel).multiplyScalar(0.45).add(_v1.set(
         (Math.random() - 0.5) * 60, -8 - Math.random() * 20, (Math.random() - 0.5) * 60
       ));
       f.node.visible = true;
+      if (++dropped >= count) break;
+    }
+  }
+
+  dropChaffs(pos, vel, count = 4) {
+    let dropped = 0;
+    for (const c of this.chaffs) {
+      if (c.active) continue;
+      c.active = true;
+      c.life = WEAPONS.chaffLife;
+      c.pos.copy(pos);
+      c.vel.copy(vel).multiplyScalar(0.5).add(_v1.set(
+        (Math.random() - 0.5) * 40, -4 - Math.random() * 12, (Math.random() - 0.5) * 40
+      ));
+      c.node.visible = true;
       if (++dropped >= count) break;
     }
   }
@@ -167,23 +218,104 @@ export class Projectiles {
     return false;
   }
 
-  // ---------- به‌روزرسانی ----------
-  update(dt, ctx) {
-    // ctx: { aircraft (لیست هواپیماها), props (اهداف زمینی), terrain, spawnProtect }
-    this._updateBullets(dt, ctx);
-    this._updateMissiles(dt, ctx);
-    this._updateDrops(dt, ctx);
-    this._updateFlares(dt, ctx);
+  // نزدیک‌ترین موشک هدایت‌شونده در راه هدف — برای RWR هوشمند
+  missileInboundInfo(targetAircraft) {
+    let best = null, bd = 1e12;
+    for (const m of this.missiles) {
+      if (!m.active || m.friendly || m.target !== targetAircraft) continue;
+      const d = m.pos.distanceTo(targetAircraft.st.pos);
+      if (d < bd) { bd = d; best = m; }
+    }
+    return best ? { kind: best.kind, dist: bd, activeSeek: best.activeSeek } : null;
   }
 
-  _updateBullets(dt, ctx) {
+  // ---------- به‌روزرسانی ----------
+  update(dt, ctx) {
+    // ctx: { aircraft, props, terrain }
+    this._dt = dt;
+    this._integrateBallistics(dt);
+    this._collideBullets(ctx);
+    this._collideDrops(ctx);
+    this._updateMissiles(dt, ctx);
+    this._updateFlares(dt, ctx);
+    this._updateChaffs(dt, ctx);
+  }
+
+  // انتگرال‌گیری دسته‌ای توپ/بمب/راکت/موشک کور با WASM
+  _integrateBallistics(dt) {
+    // توپ‌ها (گرانش سبک، بدون درگ)
+    let n = 0;
+    for (const b of this.bullets) {
+      if (!b.active) continue;
+      const o = n * 6;
+      this._bArr[o] = b.pos.x; this._bArr[o + 1] = b.pos.y; this._bArr[o + 2] = b.pos.z;
+      this._bArr[o + 3] = b.vel.x; this._bArr[o + 4] = b.vel.y; this._bArr[o + 5] = b.vel.z;
+      n++;
+    }
+    if (n > 0) {
+      this.sim.ballisticBatch(this._bArr, n, dt, 4, 0);
+      let i = 0;
+      for (const b of this.bullets) {
+        if (!b.active) continue;
+        const o = i * 6;
+        b.pos.set(this._bArr[o], this._bArr[o + 1], this._bArr[o + 2]);
+        b.vel.set(this._bArr[o + 3], this._bArr[o + 4], this._bArr[o + 5]);
+        i++;
+      }
+    }
+    // بمب و راکت (دو فراخوان با گرانش/درگ متفاوت)
+    this._integrateDrops(dt, true, 9.81, 0.06);
+    this._integrateDrops(dt, false, 3.5, 0);
+    // موشک‌های کور (قفل شکسته) — بالستیک واقعی
+    let m = 0;
+    for (const ms of this.missiles) {
+      if (!ms.active || ms.guided) continue;
+      const o = m * 6;
+      this._bArr[o] = ms.pos.x; this._bArr[o + 1] = ms.pos.y; this._bArr[o + 2] = ms.pos.z;
+      this._bArr[o + 3] = ms.vel.x; this._bArr[o + 4] = ms.vel.y; this._bArr[o + 5] = ms.vel.z;
+      m++;
+    }
+    if (m > 0) {
+      this.sim.ballisticBatch(this._bArr, m, dt, 6, 0.08);
+      let i = 0;
+      for (const ms of this.missiles) {
+        if (!ms.active || ms.guided) continue;
+        const o = i * 6;
+        ms.pos.set(this._bArr[o], this._bArr[o + 1], this._bArr[o + 2]);
+        ms.vel.set(this._bArr[o + 3], this._bArr[o + 4], this._bArr[o + 5]);
+        i++;
+      }
+    }
+  }
+
+  _integrateDrops(dt, bomb, g, drag) {
+    let n = 0;
+    for (const d of this.drops) {
+      if (!d.active || d.bomb !== bomb) continue;
+      const o = n * 6;
+      this._bArr[o] = d.pos.x; this._bArr[o + 1] = d.pos.y; this._bArr[o + 2] = d.pos.z;
+      this._bArr[o + 3] = d.vel.x; this._bArr[o + 4] = d.vel.y; this._bArr[o + 5] = d.vel.z;
+      n++;
+    }
+    if (n === 0) return;
+    this.sim.ballisticBatch(this._bArr, n, dt, g, drag);
+    let i = 0;
+    for (const d of this.drops) {
+      if (!d.active || d.bomb !== bomb) continue;
+      const o = i * 6;
+      d.pos.set(this._bArr[o], this._bArr[o + 1], this._bArr[o + 2]);
+      d.vel.set(this._bArr[o + 3], this._bArr[o + 4], this._bArr[o + 5]);
+      i++;
+    }
+  }
+
+  _collideBullets(ctx) {
+    const dt = this._dt || 0.016;
     for (const b of this.bullets) {
       if (!b.active) continue;
       b.life -= dt;
       if (b.life <= 0) { b.active = false; b.node.visible = false; continue; }
-      const a = _v1.copy(b.pos);
-      b.vel.y -= 4 * dt;
-      b.pos.addScaledVector(b.vel, dt);
+      const a = _v1.copy(b.pos).addScaledVector(b.vel, -dt); // موقعیت قبلی
       const bb = b.pos;
       let hit = false;
       // هواپیماها
@@ -245,45 +377,92 @@ export class Projectiles {
     for (const m of this.missiles) {
       if (!m.active) continue;
       m.life -= dt;
-      m.motor -= dt;
       if (m.life <= 0) { this._boomMissile(m, ctx); continue; }
 
-      const speed = m.motor > 0
-        ? Math.min(m.vel.length() + 300 * dt, m.speed)
-        : Math.max(m.vel.length() - 60 * dt, 320);
-
       const t = m.target;
-      if (t && (t.alive === undefined || t.alive)) {
-        const tp = _v1.copy(t.pos);
-        if (t.vel && t.vel.lengthSq) tp.addScaledVector(t.vel, m.pos.distanceTo(t.pos) / speed * 0.75);
-        const desired = _v2.copy(tp).sub(m.pos).normalize();
-        const cur = _v3.copy(m.vel).normalize();
-        const axis = _v4.copy(cur).cross(desired);
-        if (axis.lengthSq() > 1e-8) {
-          const ang = Math.min(cur.angleTo(desired), m.turn * dt);
-          m.vel.copy(cur.applyAxisAngle(axis.normalize(), ang)).multiplyScalar(speed);
-        } else {
-          m.vel.setLength(speed);
+      const radar = m.kind !== 'ir';
+
+      // ---------- الکترونیک: روشنایی SARH ----------
+      if (m.guided && m.kind === 'sarh' && m.attacker) {
+        const lit = m.attacker.alive && m.attacker.lockTarget === t && m.attacker.lockT >= WEAPONS.lockTime * 0.6;
+        m.illumLostT = lit ? 0 : m.illumLostT + dt;
+        if (m.illumLostT > WEAPONS.sarhGraceT) {
+          m.guided = false;   // قفل روشنایی قطع شد → بالستیک
         }
-        // برخورد نزدیک
-        if (m.pos.distanceTo(t.pos) < (t.radius || 12)) {
-          this._boomMissile(m, ctx);
-          continue;
+      }
+
+      // ---------- الکترونیک: ناتچینگ (کراسینگ) برای موشک راداری ----------
+      if (m.guided && radar && t && t.vel && t.alive !== false) {
+        const dist = m.pos.distanceTo(t.pos);
+        if (!m.activeSeek && dist > WEAPONS.notchMinRange) {
+          const vLen = t.vel.length();
+          if (vLen > 60) {
+            _v1.copy(t.pos).sub(m.pos).normalize();
+            const along = Math.abs(t.vel.dot(_v1) / vLen);
+            if (along < WEAPONS.notchCos && Math.random() < 0.9 * dt) {
+              m.guided = false;   // ناتچ موفق → از دید رادار خارج شد
+            }
+          }
         }
-        // گول‌زنی فلر
-        if (!m.friendly && Math.random() < WEAPONS.flareDecoyChance * dt * 0.9) {
+        if (m.kind === 'arh' && !m.activeSeek &&
+            (dist < WEAPONS.activeRadarRange || m.life < 8)) {
+          m.activeSeek = true;   // جوینده فعال روشن شد
+        }
+        if (m.activeSeek && dist < WEAPONS.notchMinRange * 0.4) {
+          // نزدیکِ جوینده فعال → فقط چف فرصت گول دارد (پایین‌تر)
+        }
+      }
+
+      // ---------- الکترونیک: گول‌زننده‌ها ----------
+      if (m.guided) {
+        if (m.kind === 'ir' && Math.random() < WEAPONS.flareDecoyChance * dt * 0.9) {
           for (const f of this.flares) {
             if (f.active && f.pos.distanceTo(m.pos) < 320) {
               m.target = { pos: f.pos, vel: f.vel, alive: true, radius: 14 };
               break;
             }
           }
+        } else if (radar && Math.random() < WEAPONS.chaffDecoyChance * dt) {
+          for (const c of this.chaffs) {
+            if (c.active && c.pos.distanceTo(m.pos) < 300) {
+              m.guided = false;   // چف اکوی جعلی → قفل راداری شکست
+              break;
+            }
+          }
         }
-      } else {
-        m.vel.setLength(speed);
       }
 
-      m.pos.addScaledVector(m.vel, dt);
+      // ---------- هدایت ----------
+      if (m.guided) {
+        const speed = m.motor > 0
+          ? Math.min(m.vel.length() + 300 * dt, m.speed)
+          : Math.max(m.vel.length() - 60 * dt, 320);
+        if (t && (t.alive === undefined || t.alive)) {
+          const tp = _v1.copy(t.pos);
+          if (t.vel && t.vel.lengthSq) tp.addScaledVector(t.vel, m.pos.distanceTo(t.pos) / speed * 0.75);
+          const desired = _v2.copy(tp).sub(m.pos).normalize();
+          const cur = _v3.copy(m.vel).normalize();
+          const axis = _v4.copy(cur).cross(desired);
+          if (axis.lengthSq() > 1e-8) {
+            const ang = Math.min(cur.angleTo(desired), m.turn * dt);
+            m.vel.copy(cur.applyAxisAngle(axis.normalize(), ang)).multiplyScalar(speed);
+          } else {
+            m.vel.setLength(speed);
+          }
+          // برخورد نزدیک
+          if (m.pos.distanceTo(t.pos) < (t.radius || 12)) {
+            this._boomMissile(m, ctx);
+            continue;
+          }
+        } else {
+          m.vel.setLength(speed);
+        }
+        m.pos.addScaledVector(m.vel, dt);
+      } else {
+        // کور: موقعیت از بچ WASM آمده — فقط برخورد تصادفی با هدف
+        if (t && t.pos && m.pos.distanceTo(t.pos) < 10) { this._boomMissile(m, ctx); continue; }
+      }
+
       // دود دنباله
       m.smokeT -= dt;
       if (m.smokeT <= 0) {
@@ -312,18 +491,11 @@ export class Projectiles {
     m.node.visible = false;
   }
 
-  _updateDrops(dt, ctx) {
+  _collideDrops(ctx) {
     for (const d of this.drops) {
       if (!d.active) continue;
-      d.life -= dt;
+      d.life -= (this._dt || 0.016);
       if (d.life <= 0) { d.active = false; d.node.visible = false; continue; }
-      if (d.bomb) {
-        d.vel.y -= 9.81 * dt;
-        d.vel.multiplyScalar(1 - 0.06 * dt);
-      } else {
-        d.vel.y -= 3.5 * dt;
-      }
-      d.pos.addScaledVector(d.vel, dt);
       let boom = false;
       // برخورد با هواپیما (راکت)
       if (!d.bomb) {
@@ -379,10 +551,27 @@ export class Projectiles {
       }
     }
   }
+
+  _updateChaffs(dt, ctx) {
+    for (const c of this.chaffs) {
+      if (!c.active) continue;
+      c.life -= dt;
+      if (c.life <= 0) { c.active = false; c.node.visible = false; continue; }
+      c.vel.multiplyScalar(1 - 0.8 * dt);
+      c.vel.y -= 2.5 * dt;
+      c.pos.addScaledVector(c.vel, dt);
+      c.node.position.copy(c.pos);
+      c.node.rotation.y += 3 * dt;
+      if (Math.random() < 0.25) {
+        this.effects.puff(c.pos, _v2.set(0, 0.5, 0), 2.5, 0.4, 0xcfd6e2, 0.35);
+      }
+    }
+  }
 }
 
 const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3(), _v4 = new THREE.Vector3();
+const _look = new THREE.Vector3();
 
 function _addMat(hex) {
   return new THREE.MeshBasicMaterial({

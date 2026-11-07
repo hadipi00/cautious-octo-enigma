@@ -33,7 +33,7 @@ export class GroundDefense {
             site.pos.clone().add(new THREE.Vector3(0, 4, 0)),
             _dir.multiplyScalar(140),
             ac, false,
-            { turn: 2.7, speed: 880, life: 12, dmg: 70 }
+            { turn: 2.7, speed: 880, life: 12, dmg: 70, kind: 'sarh' }
           );
           this.effects.spark(site.pos);
           site.cooldown = WEAPONS.samReload + Math.random() * 4;

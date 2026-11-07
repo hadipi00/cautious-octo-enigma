@@ -41,7 +41,8 @@ export function buildJet(v = {}, len = 15, span = 10) {
     swept:   { root: 4.6 * s, tip: 1.5 * s, sweep: semi * 0.62, zLE: 1.6 * s },
     delta:   { root: 6.8 * s, tip: 1.0 * s, sweep: semi * 0.85, zLE: 0.8 * s },
     variable:{ root: 5.4 * s, tip: 2.0 * s, sweep: semi * 0.55, zLE: 1.6 * s },
-  }[wingType];
+    straight:{ root: 5.2 * s, tip: 2.4 * s, sweep: semi * 0.10, zLE: 1.1 * s },
+  }[wingType] || { root: 4.6 * s, tip: 1.5 * s, sweep: semi * 0.62, zLE: 1.6 * s };
 
   const mkWing = (sideX) => {
     const sh = new THREE.Shape();

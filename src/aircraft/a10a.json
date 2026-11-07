@@ -1,0 +1,68 @@
+{
+  "id": "a10a",
+  "name": "A-10A Thunderbolt II",
+  "nation": "USA",
+  "role": "attack",
+  "mass": 11300,
+  "fuelCap": 4900,
+  "thrustMil": 80600,
+  "thrustAB": 80600,
+  "burnMil": 1.4,
+  "burnAB": 1.4,
+  "wingArea": 47.0,
+  "wingSpan": 17.53,
+  "len": 16.26,
+  "CL0": 0.09,
+  "CLa": 4.8,
+  "aStall": 20,
+  "CD0": 0.038,
+  "kInd": 0.11,
+  "maxG": 7,
+  "rollRate": 160,
+  "pitchRate": 13,
+  "yawRate": 9,
+  "gearH": 2.5,
+  "bellyH": 1.3,
+  "guns": [
+    {
+      "name": "GAU-8/A AVENGER",
+      "ammo": 1174
+    }
+  ],
+  "gunDmg": 24,
+  "missiles": [
+    {
+      "name": "AIM-9L",
+      "type": "ir",
+      "count": 2,
+      "range": 8000
+    }
+  ],
+  "bombs": 8,
+  "rockets": 38,
+  "flares": 120,
+  "chaff": 120,
+  "radar": null,
+  "rcs": 12,
+  "stats": {
+    "speed": 0.45,
+    "agility": 0.5,
+    "firepower": 0.95,
+    "armor": 1.0
+  },
+  "visual": {
+    "wingType": "straight",
+    "tailType": "single",
+    "engines": 1,
+    "body": "#707a6b",
+    "accent": "#3f4a38",
+    "fusW": 1.15
+  },
+  "cockpit": {
+    "style": "west",
+    "panel": "#2e3236",
+    "sideStick": false,
+    "mfds": 1
+  },
+  "hp": 160
+}
