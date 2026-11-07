@@ -1,0 +1,61 @@
+{
+  "id": "mig15bis",
+  "name": "MiG-15bis Fagot",
+  "nation": "RUSSIA",
+  "role": "era-korea",
+  "mass": 3700,
+  "fuelCap": 1200,
+  "thrustMil": 27000,
+  "thrustAB": 29500,
+  "burnMil": 0.9,
+  "burnAB": 3.4,
+  "wingArea": 20.6,
+  "wingSpan": 10.08,
+  "len": 10.86,
+  "CL0": 0.06,
+  "CLa": 5.0,
+  "aStall": 16,
+  "CD0": 0.026,
+  "kInd": 0.13,
+  "maxG": 8,
+  "rollRate": 130,
+  "pitchRate": 13,
+  "yawRate": 6,
+  "gearH": 1.9,
+  "bellyH": 0.95,
+  "guns": [
+    {
+      "name": "N-37 + 2×NR-23",
+      "ammo": 205,
+      "cal": 37
+    }
+  ],
+  "missiles": [],
+  "bombs": 0,
+  "rockets": 0,
+  "flares": 0,
+  "chaff": 0,
+  "stats": {
+    "speed": 0.3,
+    "agility": 0.72,
+    "firepower": 0.75,
+    "armor": 0.5
+  },
+  "visual": {
+    "wingType": "swept",
+    "tailType": "single",
+    "engines": 1,
+    "body": "#a8b0ba",
+    "accent": "#6b4a3a",
+    "fusW": 0.95
+  },
+  "cockpit": {
+    "style": "russia",
+    "panel": "#33413a",
+    "sideStick": false,
+    "mfds": 1
+  },
+  "hp": 55,
+  "radar": null,
+  "rcs": 4
+}

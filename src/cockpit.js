@@ -1,8 +1,12 @@
 // ============================================================
-// کابین پارامتریک سه‌بعدی — برای همه جنگنده‌ها
-// داشبورد در ارتفاع چشم خلبان + MFD زنده (رادار/وضعیت) + استیک متحرک
-// سر خلبان با نگاه می‌چرخد + شیشه کانوپی نیمه‌شفاف
-// سبک غربی/روسی از روی داده هر جنگنده
+// کابین نسخه ۲ — پوسته بسته‌ی کامل دور نقطه چشم خلبان
+// ------------------------------------------------------------
+// ریشه باگ «کابین تو دیواره»: دوربین داخل بدنه/کانوپی بیرونی بود و
+// مثلث‌های نزدیک، داخل قاب دوربین clip می‌شدند. راه‌حل استاندارد:
+//   در نمای کابین، بدنه بیرونی کامل مخفی می‌شود و فقط همین پوسته
+//   (داشبورد/کنسول/قاب/شیشه) دور نقطه چشم دیده می‌شود.
+// eyeLocal: نقطه دقیق چشم خلبان در مختصات محلی کابین — game.js دوربین
+// را دقیقاً همان‌جا می‌گذارد و firstPersonHide در نمای اول‌شخص مخفی است.
 // ============================================================
 import * as THREE from 'three';
 
@@ -22,17 +26,28 @@ export function buildCockpit(spec) {
   // کابین نزدیک دماغه، داخل بدنه
   g.position.set(0, 0.02 * s, 1.62 * s);
 
+  // چشم خلبان — مرجع همه چیز (دوربین بازیکن دقیقاً همین‌جا می‌نشیند)
+  const EYE = new THREE.Vector3(0, 0.30 * s, -0.10 * s);
+
   const mat = (c, rough = 0.85, metal = 0.1) =>
     new THREE.MeshStandardMaterial({ color: c, roughness: rough, metalness: metal });
+  const shellMat = mat(0x181c22, 0.92, 0.08);
 
-  // ---------- کف/تُب کابین — پایین دید را پر می‌کند ----------
-  const tub = new THREE.Mesh(new THREE.BoxGeometry(0.94 * s, 0.5 * s, 1.15 * s), mat(0x14181e, 0.95, 0.05));
-  tub.position.set(0, -0.40 * s, 0.28 * s);
-  g.add(tub);
+  // ---------- کف کابین ----------
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(0.96 * s, 0.07 * s, 2.1 * s), shellMat);
+  floor.position.set(0, -0.40 * s, 0.15 * s);
+  g.add(floor);
 
-  // ---------- داشبورد و آفتاب‌گیر (در ارتفاع چشم) ----------
-  const glare = new THREE.Mesh(new THREE.BoxGeometry(0.94 * s, 0.07 * s, 0.30 * s), mat(0x181c22, 0.95));
-  glare.position.set(0, 0.17 * s, 0.66 * s);
+  // ---------- دیواره‌های جانبی (تا زیر سطح چشم — بالای آن‌ها شیشه است) ----------
+  for (const sx of [-1, 1]) {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(0.05 * s, 0.62 * s, 1.35 * s), shellMat);
+    wall.position.set(sx * 0.55 * s, -0.10 * s, 0.10 * s);
+    g.add(wall);
+  }
+
+  // ---------- داشبورد و آفتاب‌گیر (لبه بالای پنل زیر چشم می‌ماند) ----------
+  const glare = new THREE.Mesh(new THREE.BoxGeometry(0.94 * s, 0.06 * s, 0.34 * s), shellMat);
+  glare.position.set(0, 0.15 * s, 0.70 * s);
   g.add(glare);
 
   const panelCanvas = document.createElement('canvas');
@@ -44,9 +59,25 @@ export function buildCockpit(spec) {
     new THREE.PlaneGeometry(0.92 * s, 0.34 * s),
     new THREE.MeshStandardMaterial({ map: panelTex, roughness: 0.9 })
   );
-  panel.position.set(0, 0.01 * s, 0.63 * s);
+  panel.position.set(0, -0.02 * s, 0.66 * s);
   panel.rotation.set(-0.42, Math.PI, 0, 'YXZ'); // رو به خلبان
   g.add(panel);
+
+  // ---------- شیشه HUD جلو (کمی بازتابنده) ----------
+  const hudGlass = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.34 * s, 0.24 * s),
+    new THREE.MeshPhysicalMaterial({
+      color: 0x9fd8b0, transparent: true, opacity: 0.10, roughness: 0.05,
+      metalness: 0.2, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false,
+    })
+  );
+  hudGlass.position.set(0, 0.28 * s, 0.80 * s);
+  hudGlass.rotation.set(-0.28, Math.PI, 0, 'YXZ');
+  g.add(hudGlass);
+  const hudFrame = new THREE.Mesh(new THREE.BoxGeometry(0.38 * s, 0.28 * s, 0.025 * s), mat(accentCol, 0.5, 0.6));
+  hudFrame.position.set(0, 0.28 * s, 0.815 * s);
+  hudFrame.rotation.x = -0.28;
+  g.add(hudFrame);
 
   // ---------- MFDها (۲ صفحه زنده) ----------
   const mfds = [];
@@ -56,43 +87,42 @@ export function buildCockpit(spec) {
     cv.width = cv.height = 256;
     const tex = new THREE.CanvasTexture(cv);
     tex.colorSpace = THREE.SRGBColorSpace;
-    const x = mfdCount === 2 ? (i === 0 ? 0.21 * s : -0.21 * s) : (i === 0 ? 0 : 0.30 * s); // x معکوس: صفحه با rotY(π) آینه می‌شود
+    const x = mfdCount === 2 ? (i === 0 ? 0.21 * s : -0.21 * s) : (i === 0 ? 0 : 0.30 * s);
     const m = new THREE.Mesh(
       new THREE.PlaneGeometry(0.25 * s, 0.25 * s),
       new THREE.MeshBasicMaterial({ map: tex })
     );
-    m.position.set(x, 0.02 * s, 0.60 * s);
-    m.rotation.set(-0.38, Math.PI, 0, 'YXZ'); // رو به خلبان
+    m.position.set(x, -0.01 * s, 0.63 * s);
+    m.rotation.set(-0.38, Math.PI, 0, 'YXZ');
     g.add(m);
     const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.29 * s, 0.29 * s, 0.02 * s), mat(accentCol));
-    bezel.position.set(x, 0.02 * s, 0.592 * s);
+    bezel.position.set(x, -0.01 * s, 0.622 * s);
     bezel.rotation.x = -0.38;
     g.add(bezel);
     mfds.push({ cv, ctx: cv.getContext('2d'), tex });
   }
 
   // ---------- پدستال و کنسول‌های کناری + چراغ‌های چشمک‌زن ----------
-  const pedestal = new THREE.Mesh(new THREE.BoxGeometry(0.30 * s, 0.44 * s, 0.42 * s), mat(panelCol));
-  pedestal.position.set(0, -0.24 * s, 0.36 * s);
+  const pedestal = new THREE.Mesh(new THREE.BoxGeometry(0.30 * s, 0.42 * s, 0.42 * s), mat(panelCol));
+  pedestal.position.set(0, -0.22 * s, 0.36 * s);
   g.add(pedestal);
   const leds = [];
   for (const sx of [-1, 1]) {
-    const con = new THREE.Mesh(new THREE.BoxGeometry(0.20 * s, 0.12 * s, 0.80 * s), mat(panelCol));
-    con.position.set(sx * 0.53 * s, -0.08 * s, 0.22 * s);
+    const con = new THREE.Mesh(new THREE.BoxGeometry(0.22 * s, 0.14 * s, 0.85 * s), mat(panelCol));
+    con.position.set(sx * 0.52 * s, -0.06 * s, 0.18 * s);
     g.add(con);
     for (let i = 0; i < 6; i++) {
       const led = new THREE.Mesh(
         new THREE.SphereGeometry(0.011 * s, 6, 4),
         new THREE.MeshBasicMaterial({ color: i % 3 === 0 ? glowCol : 0x30404a })
       );
-      led.position.set(sx * (0.49 + Math.random() * 0.08) * s, -0.02 * s, -0.10 + i * 0.085 * s);
+      led.position.set(sx * (0.48 + Math.random() * 0.07) * s, 0.005 * s, -0.12 + i * 0.085 * s);
       g.add(led);
       leds.push(led);
     }
   }
 
   // ---------- استیک (جانبی یا مرکزی) + گاز ----------
-  // توجه: +X قاب هواپیما = چپِ خلبان — استیک جانبی سمت راست خلبان است (−X)
   const stickGroup = new THREE.Group();
   const side = cfg.sideStick ? 1 : 0;
   const stickX = side ? -0.40 * s : 0;
@@ -105,24 +135,28 @@ export function buildCockpit(spec) {
   stickGroup.position.set(stickX, stickY, 0.40 * s);
   g.add(stickGroup);
   const throttleLever = new THREE.Mesh(new THREE.BoxGeometry(0.05 * s, 0.05 * s, 0.16 * s), mat(0x14181d));
-  throttleLever.position.set(side ? 0.20 * s : 0.14 * s, -0.10 * s, 0.30 * s); // گاز سمت چپ خلبان
+  throttleLever.position.set(side ? 0.20 * s : 0.14 * s, -0.10 * s, 0.30 * s);
   g.add(throttleLever);
 
-  // ---------- صندلی و خلبان (از نمای بیرونی دیده می‌شود) ----------
+  // ---------- صندلی + خلبان (فقط نمای بیرونی) ----------
+  const firstPersonHide = [];
   const seat = new THREE.Mesh(new THREE.BoxGeometry(0.50 * s, 0.13 * s, 0.48 * s), mat(seatCol));
-  seat.position.set(0, -0.16 * s, 0.02 * s);
+  seat.position.set(0, -0.16 * s, -0.30 * s);
   g.add(seat);
-  const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.50 * s, 0.60 * s, 0.12 * s), mat(seatCol));
-  seatBack.position.set(0, 0.12 * s, -0.24 * s);
+  const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.50 * s, 0.62 * s, 0.12 * s), mat(seatCol));
+  seatBack.position.set(0, 0.10 * s, -0.52 * s);
   seatBack.rotation.x = 0.14;
   g.add(seatBack);
+  const headrest = new THREE.Mesh(new THREE.BoxGeometry(0.30 * s, 0.22 * s, 0.14 * s), mat(seatCol));
+  headrest.position.set(0, 0.34 * s, -0.55 * s);
+  g.add(headrest);
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.16 * s, 0.24 * s, 4, 8), mat(0x2e3a2a));
-  body.position.set(0, 0.08 * s, -0.12 * s);
+  body.position.set(0, 0.10 * s, -0.38 * s);
   body.rotation.x = 0.22;
   g.add(body);
-  // سر خلبان — گروه مجزا برای چرخش با نگاه
+  // سر خلبان دقیقاً در نقطه چشم — گروه مجزا برای چرخش با نگاه
   const headGroup = new THREE.Group();
-  headGroup.position.set(0, 0.17 * s, -0.16 * s);
+  headGroup.position.copy(EYE);
   const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.125 * s, 10, 8), mat(0xd8dcd4, 0.4));
   const visor = new THREE.Mesh(
     new THREE.SphereGeometry(0.12 * s, 10, 6, 0, Math.PI * 2, Math.PI * 0.35, Math.PI * 0.35),
@@ -131,24 +165,56 @@ export function buildCockpit(spec) {
   visor.rotation.x = 0.35;
   headGroup.add(helmet, visor);
   g.add(headGroup);
+  firstPersonHide.push(seat, seatBack, headrest, body, headGroup);
 
-  // ---------- قاب کانوپی (اطراف دید) ----------
+  // ---------- دیوارک عقب (پشت سر — هنگام نگاه به عقب سیاه نمی‌بینی) ----------
+  const bulk = new THREE.Mesh(new THREE.BoxGeometry(0.96 * s, 0.85 * s, 0.06 * s), shellMat);
+  bulk.position.set(0, 0.0, -0.68 * s);
+  g.add(bulk);
+
+  // ---------- قاب کانوپی داخلی ----------
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x79828b, roughness: 0.42, metalness: 0.7 });
   for (const sx of [-1, 1]) {
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05 * s, 0.05 * s, 1.5 * s), mat(0x9aa4ad, 0.4, 0.7));
-    rail.position.set(sx * 0.52 * s, 0.20 * s, 0.15 * s);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05 * s, 0.05 * s, 1.55 * s), frameMat);
+    rail.position.set(sx * 0.53 * s, 0.235 * s, 0.10 * s);
     g.add(rail);
   }
-  const arch = new THREE.Mesh(new THREE.TorusGeometry(0.54 * s, 0.026 * s, 6, 12, Math.PI), mat(0x9aa4ad, 0.4, 0.7));
-  arch.rotation.y = Math.PI / 2;
-  arch.position.set(0.0, 0.20 * s, -0.55 * s);
-  g.add(arch);
+  // کمان جلو (بالای شیشه جلو) و کمان عقب
+  const archF = new THREE.Mesh(new THREE.TorusGeometry(0.545 * s, 0.026 * s, 6, 14, Math.PI), frameMat);
+  archF.rotation.y = Math.PI / 2;
+  archF.position.set(0, 0.24 * s, 0.82 * s);
+  g.add(archF);
+  const archR = new THREE.Mesh(new THREE.TorusGeometry(0.545 * s, 0.024 * s, 6, 14, Math.PI), frameMat);
+  archR.rotation.y = Math.PI / 2;
+  archR.position.set(0, 0.24 * s, -0.62 * s);
+  g.add(archR);
+
+  // ---------- شیشه‌های جانبی + سقف شیشه‌ای (از داخل کمی دیده می‌شوند) ----------
+  const sideGlassMat = new THREE.MeshPhysicalMaterial({
+    color: 0x2a4a60, transparent: true, opacity: 0.14, roughness: 0.06,
+    metalness: 0.1, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false,
+  });
+  for (const sx of [-1, 1]) {
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.3 * s, 0.42 * s), sideGlassMat);
+    sg.position.set(sx * 0.575 * s, 0.33 * s, 0.10 * s);
+    sg.rotation.y = Math.PI / 2;
+    g.add(sg);
+  }
+  const topGlass = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+    sideGlassMat
+  );
+  topGlass.scale.set(0.55 * s, 0.42 * s, 1.15 * s);
+  topGlass.position.set(0, 0.26 * s, 0.10 * s);
+  g.add(topGlass);
 
   return {
     group: g,
+    eyeLocal: EYE,
+    firstPersonHide,
     stickGroup, throttle: throttleLever,
     mfds, leds, headGroup,
     mfdT: 0,
-    // به‌روزرسانی: استیک/گاز با ورودی خلبان + سر با نگاه + MFD زنده
     update(dt, aircraft, game) {
       const inp = aircraft.input;
       stickGroup.rotation.z = THREE.MathUtils.clamp(inp.roll, -1, 1) * 0.45;
@@ -182,7 +248,6 @@ function drawStaticPanel(g, panelCol, west, glow) {
   const hex = '#' + new THREE.Color(panelCol).getHexString();
   g.fillStyle = hex;
   g.fillRect(0, 0, 256, 256);
-  // صفحه‌های گرد ابزار
   const dial = (x, y, r, label) => {
     g.fillStyle = '#0a0d10';
     g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
@@ -198,14 +263,13 @@ function drawStaticPanel(g, panelCol, west, glow) {
   dial(204, 70, 26, 'ALT');
   dial(90, 168, 20, 'VSI');
   dial(166, 168, 20, 'RPM');
-  // کلیدها و سوئیچ‌ها
   for (let i = 0; i < 14; i++) {
     g.fillStyle = i % 4 === 0 ? glow : '#465059';
     g.fillRect(18 + i * 16, 208, 9, 14);
   }
 }
 
-// ---------- MFD رادار (زنده — از ترک‌های واقعی رادار) ----------
+// ---------- MFD رادار (زنده) ----------
 function drawRadarMfd(mfd, aircraft, game, west, glow) {
   const g = mfd.ctx;
   const W = 256;
@@ -213,11 +277,9 @@ function drawRadarMfd(mfd, aircraft, game, west, glow) {
   g.fillStyle = '#04080a';
   g.fillRect(0, 0, W, W);
   const cx = W / 2, cy = W / 2 + 30, R = 108;
-  // دایره‌های برد
   g.strokeStyle = '#1d3a30'; g.lineWidth = 2;
   for (let r = R; r > 0; r -= R / 3) { g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke(); }
   g.beginPath(); g.moveTo(cx, cy - R); g.lineTo(cx, cy + R); g.moveTo(cx - R, cy); g.lineTo(cx + R, cy); g.stroke();
-  // پرچوی چرخان
   const sweep = (Date.now() / 900) % (Math.PI * 2);
   const grad = g.createConicGradient ? g.createConicGradient(sweep, cx, cy) : null;
   if (grad) {
@@ -227,7 +289,6 @@ function drawRadarMfd(mfd, aircraft, game, west, glow) {
     g.fillStyle = grad;
     g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
   }
-  // جت خودی (مرکز)
   g.fillStyle = glowHex;
   g.fillRect(cx - 2, cy - 10, 4, 20);
   g.fillRect(cx - 10, cy - 2, 20, 4);
@@ -237,10 +298,10 @@ function drawRadarMfd(mfd, aircraft, game, west, glow) {
   const scale = R / dispRange;
   _mfdQ.copy(aircraft.st.quat).invert();
 
-  const plot = (e, detected, closure) => {
+  const plot = (e, detected) => {
     _mfdV.copy(e.st.pos).sub(aircraft.st.pos);
     _mfdV.applyQuaternion(_mfdQ);
-    const rx = _mfdV.x, rz = _mfdV.z; // +z جلو → بالا صفحه
+    const rx = _mfdV.x, rz = _mfdV.z;
     let px = cx + rx * scale, py = cy - rz * scale;
     const dc = Math.hypot(px - cx, py - cy);
     if (dc > R) return;
@@ -249,7 +310,6 @@ function drawRadarMfd(mfd, aircraft, game, west, glow) {
     g.strokeStyle = locked ? '#ffffff' : '#ff5050';
     g.lineWidth = 2;
     g.strokeRect(px - 6, py - 6, 12, 12);
-    // بردار نسبی سرعت (تصویر سرعت هدف در قاب خودی)
     if (detected && e.st.vel.lengthSq() > 100) {
       _mfdV.copy(e.st.vel).applyQuaternion(_mfdQ).multiplyScalar(0.04);
       g.beginPath();
@@ -263,7 +323,7 @@ function drawRadarMfd(mfd, aircraft, game, west, glow) {
   if (radar) {
     for (const tr of radar._pool) {
       if (!tr.ac || !tr.ac.alive) continue;
-      plot(tr.ac, tr.detected, tr.closure);
+      plot(tr.ac, tr.detected);
     }
     g.fillStyle = '#9fb2ca'; g.font = '13px monospace';
     const lt = aircraft.lockTarget;
@@ -271,12 +331,11 @@ function drawRadarMfd(mfd, aircraft, game, west, glow) {
     g.fillText(radar.mode.toUpperCase() + (ready ? ' LOCK' : lt ? ' DESIG' : ''), 12, 22);
     g.fillText(`RNG ${(dispRange / 1000) | 0}KM`, 12, W - 12);
   } else {
-    // بدون رادار — فقط دید چشمی/IR
     if (game && game.player === aircraft) {
       for (const e of game.aircraft) {
         if (!e.alive || e.team === aircraft.team) continue;
         if (e.st.pos.distanceTo(aircraft.st.pos) > 12000) continue;
-        plot(e, true, 0);
+        plot(e, true);
       }
     }
     g.fillStyle = '#9fb2ca'; g.font = '13px monospace';

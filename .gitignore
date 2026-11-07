@@ -14,3 +14,6 @@ db/
 examples/
 prisma/
 refactor/
+native-godot/.godot/
+dist/
+tools/

@@ -4,7 +4,9 @@
 import * as THREE from 'three';
 import { QUALITY, CAM, BASES, SCORE } from './config.js';
 import { Terrain } from './world/terrain.js';
-import { buildSky, buildClouds } from './world/sky.js';
+import { buildSky, buildClouds, SKY_HORIZON } from './world/sky.js';
+import { Hangar } from './world/hangar.js';
+import { buildJet } from './models/parametric.js';
 import { Props } from './world/props.js';
 import { Controls } from './flight/controls.js';
 import { Aircraft } from './flight/aircraft.js';
@@ -35,22 +37,28 @@ export class Game {
 
     this.renderer = new THREE.WebGLRenderer({
       canvas, antialias: q.antialias, powerPreference: 'high-performance', preserveDrawingBuffer: true,
+      logarithmicDepthBuffer: true, stencil: false,
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.08;
+    this.renderer.toneMappingExposure = 1.06;
     this.renderer.shadowMap.enabled = q.shadows;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(0xcfc9bd, q.fogNear, q.fogFar);
+    // مه همرنگ افق آسمان — مرز زمین/آسمان نامرئی می‌شود
+    this.scene.fog = new THREE.Fog(SKY_HORIZON.clone().multiplyScalar(0.94), q.fogNear, q.fogFar);
     this.camera = new THREE.PerspectiveCamera(CAM.chaseFov, innerWidth / innerHeight, 0.5, 45000);
 
     this.terrain = new Terrain(this.scene, q);
-    this.sky = buildSky(this.scene, q);
+    this.sky = buildSky(this.scene, q, this.renderer);
     this.clouds = buildClouds(this.scene, q);
     this.props = new Props(this.scene, this.terrain);
     this.props.setTerrainH((x, z) => this.terrain.getHeight(x, z));
+
+    // آشیانه سه‌بعدی — منو/انتخاب جت روی این صحنه رندر می‌شود
+    this.hangar = new Hangar(q, this.sky.envRT ? this.sky.envRT.texture : null);
+    this.hangar.attachDrag(canvas);
 
     this.effects = new EffectSystem(this.scene, q);
     this.projectiles = new Projectiles(this.scene, this.effects, null);
@@ -58,6 +66,7 @@ export class Game {
     this.groundDefense.enabled = false;
 
     this.controls = new Controls(canvas);
+    this.controls.sensitivity = this.settings.sens || 1;
     this.audio = new GameAudio();
     this.hud = new HUD();
     this.net = new NetClient(this);
@@ -73,6 +82,7 @@ export class Game {
     this.state = 'menu';           // menu | flying | paused | dead | victory
     this.missionType = null;
     this.camMode = 0;              // کابین پیش‌فرض
+    this._fpActive = null;         // وضعیت فعلی مخفی‌سازی بدنه (اول‌شخص)
     this._wreckT = 0;
     this.aircraft = [];
     this.player = null;
@@ -115,7 +125,20 @@ export class Game {
         this._frame();
       }
     }, 33);
+    this._showHangarJet();
     this.menu.ready();
+  }
+
+  // جت انتخاب‌شده را روی سکوی آشیانه می‌گذارد
+  showInHangar(specId) {
+    const spec = this.specs[specId] || this.specs.f16c;
+    const built = buildJet(spec.visual, spec.len, spec.wingSpan, spec.nation);
+    this.hangar.setJet(built.group, spec.len / 15);
+  }
+
+  _showHangarJet() {
+    const id = this.menu ? this.menu.selectedId() : null;
+    this.showInHangar(id);
   }
 
   // ---------- شروع مأموریت ----------
@@ -323,7 +346,10 @@ export class Game {
     if (this.state === 'flying') this._updateFlying(dt);
     else if (this.state === 'menu') this._updateMenuCam(dt);
     else this._updateEndCam(dt);
-    if (!this.simMode) this.renderer.render(this.scene, this.camera);
+    if (!this.simMode) {
+      if (this.state === 'menu') this.renderer.render(this.hangar.scene, this.camera);
+      else this.renderer.render(this.scene, this.camera);
+    }
     this._perf(dt);
   }
 
@@ -483,6 +509,19 @@ export class Game {
 
   _updateCamera(dt) {
     const st = this.player.st;
+    const p = this.player;
+    // نمای اول‌شخص: بدنه بیرونی مخفی + near کوچک (رفع کامل کابین-تو-دیواره)
+    const fp = this.camMode === 0;
+    const wantNear = fp ? 0.07 : 0.5;
+    if (this.camera.near !== wantNear) {
+      this.camera.near = wantNear;
+      this.camera.updateProjectionMatrix();
+    }
+    if (this._fpActive !== fp) {
+      this._fpActive = fp;
+      p.setExteriorVisible(!fp);
+      p.setFirstPerson(fp);
+    }
     const look = this.controls.look;
     if (performance.now() - this.controls.lastMove > CAM.lookRecenter * 1000) {
       look.yaw = damp(look.yaw, 0, 4, dt);
@@ -541,13 +580,8 @@ export class Game {
   }
 
   _updateMenuCam(dt) {
-    this._menuT += dt * 0.04;
-    const B = BASES.friendly;
-    this.camera.position.set(B.x + Math.cos(this._menuT) * 2600, 560, B.z + Math.sin(this._menuT) * 2600);
-    this.camera.lookAt(B.x, 60, B.z);
-    this.sky.update(this.camera.position, this.camera);
-    this.clouds.update(this.camera.position);
-    if (this.camera.fov !== 62) { this.camera.fov = 62; this.camera.updateProjectionMatrix(); }
+    // دوربین مداری آشیانه (درگ موس = چرخش، اسکرول = زوم)
+    this.hangar.update(dt, this.camera);
   }
 
   _updateEndCam(dt) {
@@ -583,8 +617,10 @@ export class Game {
     for (const ac of this.aircraft) this.scene.remove(ac.group);
     this.aircraft = [];
     this.player = null;
+    this._fpActive = null;
     this.net.leaveMission();
     this.audio.suspend();
+    this._showHangarJet();
   }
 
   restart() {

@@ -1,0 +1,77 @@
+{
+  "id": "f22a",
+  "name": "F-22A Raptor",
+  "nation": "USA",
+  "role": "stealth",
+  "mass": 19700,
+  "fuelCap": 8200,
+  "thrustMil": 209000,
+  "thrustAB": 312000,
+  "burnMil": 2.1,
+  "burnAB": 9.8,
+  "wingArea": 78.0,
+  "wingSpan": 13.56,
+  "len": 18.92,
+  "CL0": 0.03,
+  "CLa": 4.7,
+  "aStall": 20,
+  "CD0": 0.02,
+  "kInd": 0.1,
+  "maxG": 9,
+  "rollRate": 280,
+  "pitchRate": 26,
+  "yawRate": 11,
+  "gearH": 2.5,
+  "bellyH": 1.25,
+  "guns": [
+    {
+      "name": "M61A2",
+      "ammo": 480,
+      "cal": 20
+    }
+  ],
+  "missiles": [
+    {
+      "name": "AIM-120C",
+      "type": "arh",
+      "count": 4,
+      "range": 18000
+    },
+    {
+      "name": "AIM-9M",
+      "type": "ir",
+      "count": 2,
+      "range": 9000
+    }
+  ],
+  "bombs": 0,
+  "rockets": 0,
+  "flares": 40,
+  "chaff": 40,
+  "stats": {
+    "speed": 0.95,
+    "agility": 0.92,
+    "firepower": 0.95,
+    "armor": 0.82
+  },
+  "visual": {
+    "wingType": "delta",
+    "tailType": "twin",
+    "engines": 2,
+    "body": "#5b6570",
+    "accent": "#39424c",
+    "fusW": 1.2
+  },
+  "cockpit": {
+    "style": "west",
+    "panel": "#23282e",
+    "sideStick": true,
+    "mfds": 2
+  },
+  "hp": 90,
+  "radar": {
+    "range": 140000,
+    "gimbal": 70
+  },
+  "rcs": 0.5
+}

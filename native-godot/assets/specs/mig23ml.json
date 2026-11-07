@@ -1,0 +1,77 @@
+{
+  "id": "mig23ml",
+  "name": "MiG-23ML Flogger",
+  "nation": "RUSSIA",
+  "role": "fighter",
+  "mass": 10700,
+  "fuelCap": 4400,
+  "thrustMil": 83400,
+  "thrustAB": 121000,
+  "burnMil": 1.9,
+  "burnAB": 8.5,
+  "wingArea": 37.3,
+  "wingSpan": 13.97,
+  "len": 16.7,
+  "CL0": 0.05,
+  "CLa": 4.5,
+  "aStall": 18,
+  "CD0": 0.027,
+  "kInd": 0.12,
+  "maxG": 8,
+  "rollRate": 230,
+  "pitchRate": 19,
+  "yawRate": 7,
+  "gearH": 2.3,
+  "bellyH": 1.25,
+  "guns": [
+    {
+      "name": "GSh-23L",
+      "ammo": 200
+    }
+  ],
+  "gunDmg": 12,
+  "missiles": [
+    {
+      "name": "R-23R",
+      "type": "sarh",
+      "count": 2,
+      "range": 24000
+    },
+    {
+      "name": "R-60M",
+      "type": "ir",
+      "count": 4,
+      "range": 6000
+    }
+  ],
+  "bombs": 2,
+  "rockets": 0,
+  "flares": 48,
+  "chaff": 48,
+  "radar": {
+    "range": 85000,
+    "gimbal": 55
+  },
+  "rcs": 7,
+  "stats": {
+    "speed": 0.9,
+    "agility": 0.72,
+    "firepower": 0.7,
+    "armor": 0.7
+  },
+  "visual": {
+    "wingType": "variable",
+    "tailType": "single",
+    "engines": 1,
+    "body": "#7e8878",
+    "accent": "#4a544a",
+    "fusW": 1.0
+  },
+  "cockpit": {
+    "style": "russia",
+    "panel": "#2a4238",
+    "sideStick": false,
+    "mfds": 1
+  },
+  "hp": 90
+}

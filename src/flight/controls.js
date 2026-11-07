@@ -50,6 +50,7 @@ export class Controls {
     this.throttle = 0;
     this.fbw = true;
     this.fireHeld = false;
+    this.sensitivity = 1; // ضریب حساسیت موس (از تنظیمات)
 
     window.addEventListener('keydown', (e) => {
       if (HANDLED.has(e.code)) e.preventDefault();
@@ -64,17 +65,23 @@ export class Controls {
 
     document.addEventListener('mousemove', (e) => {
       if (document.pointerLockElement !== canvas) return;
+      const sens = this.sensitivity || 1;
       this.lookMode = this._wantLook();
       if (this.lookMode) {
         // حالت سر خلبان — موس فقط نگاه را می‌چرخاند
-        this.look.yaw = clamp(this.look.yaw - e.movementX * CAM.lookSens, -2.5, 2.5);
-        this.look.pitch = clamp(this.look.pitch - e.movementY * CAM.lookSens, -1.15, 1.15);
+        this.look.yaw = clamp(this.look.yaw - e.movementX * CAM.lookSens * sens, -2.5, 2.5);
+        this.look.pitch = clamp(this.look.pitch - e.movementY * CAM.lookSens * sens, -1.15, 1.15);
       } else {
         // حالت اهرم — موس نشانگر هدف پرواز را جابه‌جا می‌کند
-        this._moveCursor(e.movementX, e.movementY);
+        this._moveCursor(e.movementX * sens, e.movementY * sens);
       }
       this.lastMove = performance.now();
     });
+    // اسکرول = گاز (مثل وارتاندر)
+    window.addEventListener('wheel', (e) => {
+      if (document.pointerLockElement !== canvas) return;
+      this.throttle = clamp(this.throttle - Math.sign(e.deltaY) * 0.06, 0, 1);
+    }, { passive: true });
     document.addEventListener('mousedown', (e) => {
       if (document.pointerLockElement === canvas && e.button === 0) this.fireHeld = true;
       else if (this.lockOnClick && !this.locked && e.button === 0) this.requestLock();

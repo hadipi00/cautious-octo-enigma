@@ -1,4 +1,4 @@
-// نقطه ورود — بارگذاری ۲۴ جنگنده + هسته WASM و راه‌اندازی
+// نقطه ورود — بارگذاری ۲۴ جنگنده + هسته WASM با نوار پیشرفت، سپس آشیانه
 import { Game } from './game.js';
 import { loadSettings } from './config.js';
 import { simcore } from './wasm/simcore.js';
@@ -21,20 +21,53 @@ const PLANE_IDS = [
   'f22a', 'mig31bm',
 ];
 
+const TIPS = [
+  'موس = اهرم پرواز؛ دماغه همیشه به سمت نشانگر می‌رود',
+  'نگه‌داشتن Ctrl موس را به «سر خلبان» تبدیل می‌کند — اطرافت را ببین',
+  'اسکرول موس = گاز · Z = افتربرنر',
+  'در نبرد بی‌آر با N رادار را روشن و از ۲۵ کیلومتری شلیک کن',
+  'فلر (C) موشک حرارتی را فریب می‌دهد؛ چف رادار را قطع می‌کند',
+  'پشت دشمن بمان تا موشک حرارتی گرمای موتورش را بگیرد',
+  'با G چرخ فرود را جمع کن — مقاومت کمتر، سرعت بیشتر',
+  'گردباد نوک بال (G بالا) نشانه چرخش تند است — عالی برای داگ‌فایت',
+];
+
+const loadBar = document.getElementById('loadBar');
+const loadTip = document.getElementById('loadTip');
+const TOTAL = PLANE_IDS.length + 2; // specs + wasm + سازه
+let loaded = 0;
+let tipIdx = (Math.random() * TIPS.length) | 0;
+const tipTimer = setInterval(() => {
+  tipIdx = (tipIdx + 1) % TIPS.length;
+  loadTip.textContent = '💡 ' + TIPS[tipIdx];
+}, 2600);
+loadTip.textContent = '💡 ' + TIPS[tipIdx];
+
+function progress() {
+  loaded++;
+  loadBar.style.width = Math.min(100, (loaded / TOTAL) * 100) + '%';
+}
+
 async function boot() {
   // هسته محاسبات سنگین WASM — اگر لود نشد، بازی با fallback JS اجرا می‌شود
+  loadTip.textContent = '⚙ بارگذاری هسته WASM…';
   await simcore.init();
+  progress();
 
   const specs = {};
   await Promise.all(PLANE_IDS.map(async (id) => {
     specs[id] = await (await fetch(`./src/aircraft/${id}.json`)).json();
+    progress();
   }));
+
+  loadTip.textContent = '🏗 ساخت آشیانه…';
   const game = new Game(canvas, specs, {
     debug: params.has('debug'),
     urlParams: [...params.keys()],
     settings: loadSettings(),
   });
   window.game = game;
+  clearInterval(tipTimer);
   if (params.has('autotest') || params.has('sim')) {
     const mission = params.get('mission') || 'air';
     const plane = params.get('plane') || 'f16c';
@@ -43,6 +76,6 @@ async function boot() {
 }
 boot().catch(err => {
   console.error(err);
-  document.getElementById('loadMsg').textContent = 'خطا در بارگذاری: ' + err.message;
-  document.getElementById('loadMsg').classList.remove('hidden');
+  clearInterval(tipTimer);
+  loadTip.textContent = '❌ خطا در بارگذاری: ' + err.message;
 });

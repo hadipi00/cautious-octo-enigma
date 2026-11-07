@@ -1,117 +1,129 @@
+# ============================================================
+# audio.gd — صدای سینتی‌شده: موتور (لوپ WAV با پیچ/گین زنده)، توپ، انفجار
+# ============================================================
 class_name GameAudio
 extends Node
-## صدای سینتیز WebAudio-like با AudioStreamWAV — بدون فایل صوتی
 
-var _engine: AudioStreamPlayer
-var _gun_players: Array = []
-var _gun_i := 0
-var _boom_players: Array = []
-var _boom_i := 0
+const SR := 22050
+
+var _engine_p: AudioStreamPlayer
+var _base_buf: PackedByteArray
+var _gun_cd := 0.0
 
 func _ready() -> void:
-	_engine = AudioStreamPlayer.new()
-	var ew := _wav_engine()
-	ew.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	ew.loop_begin = 0
-	ew.loop_end = ew.data.size() / 2
-	_engine.stream = ew
-	_engine.volume_db = -40.0
-	add_child(_engine)
-	_engine.play()
-
-	for i in 4:
-		var gp := AudioStreamPlayer.new()
-		gp.stream = _wav_gun()
-		gp.volume_db = -8.0
-		add_child(gp)
-		_gun_players.append(gp)
-	for i in 3:
-		var bp := AudioStreamPlayer.new()
-		bp.stream = _wav_explosion()
-		bp.volume_db = -4.0
-		add_child(bp)
-		_boom_players.append(bp)
-
-func update_engine(throttle: float, ab: bool, v: float) -> void:
-	if _engine == null:
-		return
-	_engine.pitch_scale = 0.55 + throttle * 0.6 + (0.22 if ab else 0.0)
-	var target_db := -40.0 + throttle * 32.0 + (4.0 if ab else 0.0) + clampf(v / 900.0, 0.0, 1.0) * 5.0
-	_engine.volume_db = lerpf(_engine.volume_db, target_db, 0.08)
-
-func gun() -> void:
-	_gun_i = (_gun_i + 1) % _gun_players.size()
-	_gun_players[_gun_i].pitch_scale = randf_range(0.9, 1.1)
-	_gun_players[_gun_i].play()
-
-func explosion() -> void:
-	_boom_i = (_boom_i + 1) % _boom_players.size()
-	_boom_players[_boom_i].play()
-
-func missile() -> void:
-	beep(300.0, 0.5, 0.3)
-
-func beep(freq: float, dur: float, vol: float) -> void:
-	var rate := 22050
-	var n := int(dur * rate)
-	var samples := PackedFloat32Array()
-	samples.resize(n)
-	for i in n:
-		var t := float(i) / rate
-		var env: float = 1.0 if t < dur * 0.8 else (dur - t) / (dur * 0.2)
-		samples[i] = sin(TAU * freq * t) * 0.6 * env
-	var p := AudioStreamPlayer.new()
-	p.stream = _wav(samples, rate)
-	p.volume_db = linear_to_db(clampf(vol, 0.01, 1.0))
-	add_child(p)
-	p.play()
-	get_tree().create_timer(dur + 0.3).timeout.connect(p.queue_free)
-
-# ---------- تولید نمونه‌ها ----------
-
-func _wav_engine() -> AudioStreamWAV:
-	var rate := 22050
-	var n := rate  # یک ثانیه loop
-	var samples := PackedFloat32Array()
-	samples.resize(n)
-	for i in n:
-		var t := float(i) / rate
-		var v := 0.34 * sin(TAU * 70.0 * t) + 0.24 * sin(TAU * 71.7 * t)
-		v += 0.20 * sin(TAU * 141.0 * t) + 0.10 * sin(TAU * 213.0 * t)
-		v += (randf() * 2.0 - 1.0) * 0.05
-		samples[i] = v * 0.8
-	return _wav(samples, rate)
-
-func _wav_gun() -> AudioStreamWAV:
-	var rate := 22050
-	var n := int(0.14 * rate)
-	var samples := PackedFloat32Array()
-	samples.resize(n)
-	for i in n:
-		var t := float(i) / rate
-		var env := exp(-t * 26.0)
-		samples[i] = ((randf() * 2.0 - 1.0) * 0.8 + 0.5 * sin(TAU * 95.0 * t)) * env
-	return _wav(samples, rate)
-
-func _wav_explosion() -> AudioStreamWAV:
-	var rate := 22050
-	var n := int(1.5 * rate)
-	var samples := PackedFloat32Array()
-	samples.resize(n)
-	for i in n:
-		var t := float(i) / rate
-		var env := exp(-t * 2.6)
-		var rumble := 0.6 * sin(TAU * 46.0 * t * (1.0 - t * 0.3))
-		samples[i] = ((randf() * 2.0 - 1.0) * 0.75 + rumble) * env
-	return _wav(samples, rate)
-
-func _wav(samples: PackedFloat32Array, rate: int) -> AudioStreamWAV:
+	_base_buf = _make_engine_loop()
 	var wav := AudioStreamWAV.new()
 	wav.format = AudioStreamWAV.FORMAT_16_BITS
-	wav.mix_rate = rate
+	wav.mix_rate = SR
+	wav.stereo = false
+	wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	wav.loop_begin = 0
+	wav.loop_end = _base_buf.size() / 2
+	wav.data = _base_buf
+	_engine_p = AudioStreamPlayer.new()
+	_engine_p.stream = wav
+	_engine_p.volume_db = -60.0
+	add_child(_engine_p)
+	_engine_p.play()
+
+func _make_engine_loop() -> PackedByteArray:
+	# یک ثانیه: عوعوی توربین (سینوس‌های هارمونیک + نویز فیلترشده)
+	var n := SR
+	var bytes := PackedByteArray()
+	bytes.resize(n * 2)
+	var lp := 0.0
+	for i in n:
+		var t := float(i) / SR
+		var v := 0.0
+		v += sin(t * 2.0 * PI * 70.0) * 0.30
+		v += sin(t * 2.0 * PI * 189.0) * 0.16
+		v += sin(t * 2.0 * PI * 311.0) * 0.08
+		var raw := randf() * 2.0 - 1.0
+		lp = lerpf(lp, raw, 0.18)
+		v += lp * 0.22
+		# کراس‌فید لبه لوپ برای بدون‌درز بودن
+		var edge := minf(i, n - 1 - i) / float(SR * 0.02)
+		v *= clampf(edge, 0.0, 1.0)
+		bytes.encode_s16(i * 2, int(clampf(v, -1.0, 1.0) * 26000.0))
+	return bytes
+
+func set_engine(st: Dictionary, flying: bool) -> void:
+	if not flying:
+		_engine_p.volume_db = -60.0
+		return
+	var thr: float = clampf(float(st.get("thr", 0.0)), 0.0, 1.0)
+	var mach: float = float(st.get("mach", 0.0))
+	_engine_p.pitch_scale = 0.7 + thr * 1.1 + mach * 0.5 + (0.35 if st.get("ab", false) else 0.0)
+	_engine_p.volume_db = lerpf(-34.0, -7.0, thr)
+
+func _play_wav(samples: PackedFloat32Array, volume_db: float) -> void:
+	var wav := AudioStreamWAV.new()
+	wav.format = AudioStreamWAV.FORMAT_16_BITS
+	wav.mix_rate = SR
 	var bytes := PackedByteArray()
 	bytes.resize(samples.size() * 2)
 	for i in samples.size():
-		bytes.encode_s16(i * 2, int(clampf(samples[i], -1.0, 1.0) * 32000.0))
+		bytes.encode_s16(i * 2, int(clampf(samples[i], -1.0, 1.0) * 32767.0))
 	wav.data = bytes
-	return wav
+	var p := AudioStreamPlayer.new()
+	p.stream = wav
+	p.volume_db = volume_db
+	add_child(p)
+	p.play()
+	p.finished.connect(p.queue_free)
+
+func gun() -> void:
+	_gun_cd -= get_process_delta_time()
+	if _gun_cd > 0.0:
+		return
+	_gun_cd = 0.09
+	var n := 900
+	var s := PackedFloat32Array()
+	s.resize(n)
+	for i in n:
+		var t := float(i) / SR
+		var env := 1.0 - float(i) / n
+		s[i] = (randf() * 2.0 - 1.0) * env * 0.8 + sin(t * 3000.0) * env * 0.3
+	_play_wav(s, -14.0)
+
+func explosion(vol := 1.0) -> void:
+	var n := SR
+	var s := PackedFloat32Array()
+	s.resize(n)
+	var lp := 0.0
+	for i in n:
+		var t := float(i) / SR
+		var env := pow(1.0 - float(i) / n, 1.8)
+		var raw := randf() * 2.0 - 1.0
+		lp = lerpf(lp, raw, 0.12)
+		s[i] = (lp * 2.2 + sin(t * 60.0) * env * 0.5) * env
+	_play_wav(s, lerpf(-20.0, -4.0, clampf(vol, 0.0, 1.0)))
+
+func ui_click() -> void:
+	var n := 1200
+	var s := PackedFloat32Array()
+	s.resize(n)
+	for i in n:
+		var t := float(i) / SR
+		var env := 1.0 - float(i) / n
+		s[i] = sin(t * 2400.0) * env * 0.3
+	_play_wav(s, -18.0)
+
+func lock_beep() -> void:
+	var n := 2205
+	var s := PackedFloat32Array()
+	s.resize(n)
+	for i in n:
+		var t := float(i) / SR
+		s[i] = sin(t * 1400.0) * (1.0 - float(i) / n) * 0.35
+	_play_wav(s, -14.0)
+
+func missile_warn() -> void:
+	var n := 4410
+	var s := PackedFloat32Array()
+	s.resize(n)
+	for i in n:
+		var t := float(i) / SR
+		var b := 0.5 + 0.5 * sin(t * 30.0)
+		s[i] = sin(t * 900.0) * b * 0.3
+	_play_wav(s, -12.0)

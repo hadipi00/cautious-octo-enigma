@@ -28,15 +28,14 @@ export class Aircraft {
     this.name = hooks.name || spec.name;
     this.ai = null; // PilotAI در صورت نیاز
 
-    const built = buildJet(spec.visual, spec.len, spec.wingSpan);
+    const built = buildJet(spec.visual, spec.len, spec.wingSpan, spec.nation);
     this.group = built.group;
     this.refs = built.refs;
     scene.add(this.group);
 
-    // کابین سه‌بعدی — همه جنگنده‌ها دارند
-    const cs = spec.len / 15;
+    // کابین سه‌بعدی — همه جنگنده‌ها دارند؛ چشم خلبان = نقطه مرجع دوربین
     this.cockpit = buildCockpit(spec);
-    this.cockpitHead = new THREE.Vector3(0, 0.42 * cs, 1.45 * cs);
+    this.cockpitHead = new THREE.Vector3().addVectors(this.cockpit.group.position, this.cockpit.eyeLocal);
     this.group.add(this.cockpit.group);
 
     this.st = {
@@ -88,6 +87,20 @@ export class Aircraft {
     let n = 0;
     for (const s of this.mslStations) n += s.left;
     return n;
+  }
+
+  // نمای اول‌شخص: بدنه بیرونی مخفی (راه‌حل قطعی «کابین تو دیواره»)
+  setExteriorVisible(v) {
+    for (const child of this.group.children) {
+      if (child === this.cockpit.group) continue;
+      child.visible = v;
+    }
+  }
+
+  // قطعات خلبان/صندلی فقط از بیرون دیده شوند
+  setFirstPerson(on) {
+    if (!this.cockpit) return;
+    for (const o of this.cockpit.firstPersonHide) o.visible = !on;
   }
 
   // ---------- اسپاون ----------

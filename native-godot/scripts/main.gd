@@ -1,266 +1,579 @@
-extends Node3D
-## AIRDOM — مغز بازی: دنیا، موج دشمنان، وضعیت‌ها، تست خودکار
+# ============================================================
+# main.gd — مغز بازی: آشیانه → انتخاب جت → مأموریت → نتیجه → آشیانه
+# مأموریت‌ها: برتری هوایی، بی‌آر، حمله به بیس، تیمی، آزاد
+# دوربین: کابین / تعقیب / دور — با نگاه آزاد Ctrl
+# ============================================================
+extends Node
 
-var terrain: AirdomTerrain
-var player: PlayerJet
-var bullets: BulletPool
-var missiles: MissileManager
-var fx: Fx
-var audio: GameAudio
-var hud: AirdomHud
+const AircraftG = preload("res://scripts/planes/aircraft.gd")
+const AIPilotG = preload("res://scripts/combat/ai_pilot.gd")
+const TerrainG = preload("res://scripts/world/terrain.gd")
+const SkyEnvG = preload("res://scripts/world/skyenv.gd")
+const EffectsG = preload("res://scripts/combat/effects.gd")
+const WeaponsG = preload("res://scripts/combat/weapons.gd")
+const GroundDefenseG = preload("res://scripts/combat/ground_defense.gd")
+const ControlsG = preload("res://scripts/ui/controls.gd")
+const HUDG = preload("res://scripts/ui/hud.gd")
+const HangarSceneG = preload("res://scripts/world/hangar_scene.gd")
+const HangarUIG = preload("res://scripts/ui/hangar_ui.gd")
+const CockpitG = preload("res://scripts/ui/cockpit.gd")
+const GameAudioG = preload("res://scripts/audio.gd")
+const TerrainHelperG = preload("res://scripts/combat/weapons.gd").TerrainHelper
 
-var enemies: Array = []
-var wave := 0
+const PLANE_IDS := [
+	"mig15bis", "f5e", "f104s", "mig21bis",
+	"f4e", "mig23ml", "miragef1", "tornado", "su24m",
+	"a10a", "su25",
+	"f14b", "f15c", "f16c", "fa18c", "mig29a", "mirage2000c", "su27s", "su30sm",
+	"jas39c", "rafale", "typhoon",
+	"f22a", "mig31bm",
+]
+
+enum State { LOADING, HANGAR, FLIGHT, PAUSED, RESULTS }
+
+var state: int = State.LOADING
+var specs: Dictionary = {}
+var plane_idx := 10
+var mission_type := "air"
+var score := 0
 var kills := 0
-var state := "flying"   # flying / paused / dead
-var _wave_timer := 0.0
-var _next_wave_pending := false
+var wave := 0
+var best := 0
+var next_wave_t := 0.0
 
-# تست خودکار: godot --path . -- autotest
+var flight_world: Node3D
+var terrain: Terrain
+var sky: SkyEnv
+var effects: Effects
+var weapons: Weapons
+var ground_defense: GroundDefense
+var hangar: HangarScene
+var camera: Camera3D
+var cockpit: Cockpit
+var controls: ControlsG
+var hud: HUDG
+var hangar_ui: HangarUIG
+var audio: GameAudioG
+
+var aircraft: Array = []
+var player: Aircraft = null
+var cam_mode := 1
+var _cam_pos := Vector3.ZERO
+var _cam_aim := Vector3.ZERO
+
+var _strike_targets: Array = []
+var _strike_left := 0
 var _autotest := false
-var _shots := []
-var _t := 0.0
-
-const GREEN := Color(0.62, 1.0, 0.69)
-const RED := Color(1.0, 0.35, 0.35)
+var _autotest_t := 0.0
+var _tp_done := false
 
 func _ready() -> void:
-	_autotest = "autotest" in OS.get_cmdline_user_args()
-	process_mode = Node.PROCESS_MODE_ALWAYS
+	best = int(UserDefaults.load_var("best", 0))
+	_build_all()
+	_load_specs()
+	if OS.get_cmdline_user_args().has("--autotest"):
+		_autotest = true
+		start_mission("air")
 
-	# ---------- دنیا ----------
-	var we := WorldEnvironment.new()
-	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
-	var sky := Sky.new()
-	var sm := ProceduralSkyMaterial.new()
-	sm.sky_top_color = Color(0.16, 0.36, 0.62)
-	sm.sky_horizon_color = Color(0.78, 0.74, 0.64)
-	sm.ground_bottom_color = Color(0.30, 0.26, 0.20)
-	sm.ground_horizon_color = Color(0.76, 0.69, 0.55)
-	sm.sun_angle_max = 30.0
-	sm.sun_curve = 0.10
-	sky.sky_material = sm
-	env.sky = sky
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.glow_enabled = true
-	env.fog_enabled = true
-	env.fog_mode = Environment.FOG_MODE_DEPTH
-	env.fog_light_color = Color(0.76, 0.70, 0.58)
-	env.fog_depth_begin = 2500.0
-	env.fog_depth_end = 20000.0
-	env.fog_sky_affect = 0.12
-	we.environment = env
-	add_child(we)
+func _build_all() -> void:
+	flight_world = Node3D.new()
+	flight_world.name = "FlightWorld"
+	add_child(flight_world)
 
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-34, -128, 0)
-	sun.light_energy = 1.3
-	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 900.0
-	add_child(sun)
-
-	terrain = AirdomTerrain.new()
+	terrain = TerrainG.new()
 	add_child(terrain)
+	terrain.build(flight_world)
 
-	fx = Fx.new()
-	add_child(fx)
-	bullets = BulletPool.new()
-	add_child(bullets)
-	missiles = MissileManager.new()
-	add_child(missiles)
-	audio = GameAudio.new()
-	add_child(audio)
-	fx.audio = audio
-	missiles.audio = audio
+	sky = SkyEnvG.new()
+	sky.build(flight_world)
 
-	player = PlayerJet.new()
-	player.terrain = terrain
-	add_child(player)
-	player.audio = audio
-	player.bullets = bullets
-	player.missiles = missiles
+	effects = EffectsG.new(flight_world)
 
-	hud = AirdomHud.new()
-	add_child(hud)
+	weapons = WeaponsG.new()
+	weapons.effects = effects
+	weapons.game = self
+	flight_world.add_child(weapons)
+
+	ground_defense = GroundDefenseG.new(terrain, effects, weapons)
+	ground_defense.game = self
+
+	hangar = HangarSceneG.new()
+	add_child(hangar)
+
+	camera = Camera3D.new()
+	camera.fov = 70.0
+	camera.near = 0.3
+	camera.far = 45000.0
+	add_child(camera)
+	camera.current = true
+	camera.position = Vector3(20, 12, 22)
+	camera.look_at(Vector3.ZERO)
+
+	cockpit = CockpitG.new()
+	cockpit.main = self
+	camera.add_child(cockpit)
+	cockpit.visible = false
+
+	controls = ControlsG.new()
+	add_child(controls)
+	controls.setup(self, camera)
+
+	hud = HUDG.new()
 	hud.main = self
-	hud.player = player
-	player.hud = hud
+	add_child(hud)
 
-	bullets.player = player
-	bullets.fx = fx
-	missiles.player = player
-	bullets.enemy_hit.connect(_on_enemy_shot)
-	bullets.player_hit.connect(func(): player.take_hit())
-	player.crashed.connect(_on_crashed)
-	missiles.enemy_killed.connect(_on_enemy_killed)
+	audio = GameAudioG.new()
+	add_child(audio)
 
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	player.spawn_air(1500.0, 90.0)
-	_spawn_wave()
+	TerrainHelperG.ground_fn = Callable(terrain, "ground_height")
 
-	_build_overlays()
+	hangar_ui = HangarUIG.new()
+	add_child(hangar_ui)
+	hangar_ui.battle_selected.connect(_on_battle_selected)
+	hangar_ui.plane_changed.connect(_on_plane_changed)
+	hangar_ui.settings_changed.connect(_on_quality_changed)
 
-# ---------- موج دشمنان ----------
-func _spawn_wave() -> void:
-	wave += 1
-	var n := 2 + wave
-	for i in n:
-		var e := EnemyJet.new()
-		e.player = player
-		e.terrain = terrain
-		e.bullets = bullets
-		e.missiles = missiles
-		add_child(e)
-		var ang := TAU * float(i) / float(n)
-		var pos := Vector3(3800 + cos(ang) * 900.0, randf_range(1300, 1900), 600 + sin(ang) * 900.0)
-		e.setup(pos, 270.0, randf_range(190, 240))
-		enemies.append(e)
-	hud.banner("موج %d — %d جت دشمن پدیدار شد" % [wave, n])
+func _load_specs() -> void:
+	var total := PLANE_IDS.size()
+	var done := 0
+	for id in PLANE_IDS:
+		var f := FileAccess.open("res://assets/specs/%s.json" % id, FileAccess.READ)
+		if f != null:
+			var parsed = JSON.parse_string(f.get_as_text())
+			if parsed is Dictionary:
+				specs[id] = parsed
+		done += 1
+		hangar_ui.set_loading(float(done) / total)
+	_refresh_hangar_jet()
+	hangar_ui.hide_loading()
+	hangar_ui.show_hangar_ui()
+	state = State.HANGAR
 
-func _on_enemy_shot(e) -> void:
-	if e is EnemyJet:
-		e.take_hit()
-		if not e.alive:
-			_on_enemy_killed(e)
+func _refresh_hangar_jet() -> void:
+	var id: String = PLANE_IDS[plane_idx]
+	var spec: Dictionary = specs.get(id, {})
+	hangar.set_jet(spec)
+	hangar_ui.set_jet_card(spec, plane_idx, PLANE_IDS.size())
 
-func _on_enemy_killed(e: Node3D) -> void:
-	if not is_instance_valid(e):
+func _on_plane_changed(delta: int) -> void:
+	plane_idx = wrapi(plane_idx + delta, 0, PLANE_IDS.size())
+	audio.ui_click()
+	_refresh_hangar_jet()
+
+func _on_quality_changed(q: String) -> void:
+	UserDefaults.save_var("quality", q)
+	apply_quality(q)
+
+func apply_quality(q: String) -> void:
+	var vp := get_viewport()
+	if q == "low":
+		vp.scaling_3d_scale = 0.7
+		vp.msaa_3d = Viewport.MSAA_DISABLED
+	elif q == "medium":
+		vp.scaling_3d_scale = 0.85
+		vp.msaa_3d = Viewport.MSAA_2X
+	elif q == "high":
+		vp.scaling_3d_scale = 1.0
+		vp.msaa_3d = Viewport.MSAA_4X
+	else:
+		vp.scaling_3d_scale = 2.0
+		vp.msaa_3d = Viewport.MSAA_4X
+
+# ---------- انتخاب نبرد ----------
+func _on_battle_selected(kind: String) -> void:
+	if kind == "__again__":
+		start_mission(mission_type)
 		return
-	kills += 1
-	fx.explosion(e.global_position, 1.4)
-	hud.banner("سرنگون شد! (%d)" % kills)
+	if kind == "__hangar__":
+		to_hangar()
+		return
+	start_mission(kind)
 
-func _process(dt: float) -> void:
-	enemies = enemies.filter(func(e): return is_instance_valid(e) and e.alive)
-	bullets.enemies = enemies
-	missiles.enemies = enemies
-	if _next_wave_pending and state == "flying":
-		_wave_timer -= dt
-		if _wave_timer <= 0.0:
-			_next_wave_pending = false
-			_spawn_wave()
-	elif enemies.is_empty() and not _next_wave_pending and state == "flying":
-		_next_wave_pending = true
-		_wave_timer = 8.0
-		hud.banner("همه دشمنان سرنگون شدند — موج بعدی تا ۸ ثانیه…")
+# ---------- مأموریت ----------
+func start_mission(kind: String) -> void:
+	mission_type = kind
+	for ac in aircraft:
+		if is_instance_valid(ac):
+			ac.queue_free()
+	aircraft.clear()
+	player = null
+	score = 0
+	kills = 0
+	wave = 0
+	next_wave_t = 0.0
+	ground_defense.enabled = (kind == "strike")
+	_strike_targets.clear()
+	_strike_left = 0
+	if kind == "strike":
+		for i in 4:
+			var ox: float = -130 + (i % 2) * 90
+			var oz: float = -700 + floorf(i / 2.0) * 320
+			_strike_targets.append({"pos": Vector3(Terrain.ENEMY.x + ox, Terrain.ENEMY.y + 7.5, Terrain.ENEMY.z + oz), "hp": 70.0, "alive": true})
+		_strike_left = 4
 
+	var plane_id: String = PLANE_IDS[plane_idx]
+	var spec: Dictionary = specs.get(plane_id, specs.values()[0])
+	weapons.aircraft_list = aircraft
+	weapons.game = self
+	player = AircraftG.new()
+	player.setup(spec, "blue", true, "خلبان", terrain, effects)
+	player.weapons = weapons
+	player.died.connect(_on_aircraft_died)
+	flight_world.add_child(player)
+	aircraft.append(player)
+	controls.reset()
+
+	match kind:
+		"free":
+			player.spawn_air(1400, 0, -2000, -2000)
+			hud.banner("پرواز آزاد — باند فرود در غرب نقشه")
+		"strike":
+			player.spawn_air(1200, 0, -2800, 800)
+			_spawn_wave(1)
+			hud.banner("حمله به بیس دشمن! مواظب SAM باش")
+		"team":
+			player.spawn_air(1500, 0, -2400, -400)
+			_spawn_ally(2)
+			_spawn_wave(2)
+			hud.banner("نبرد تیمی — با متحدانت در حالتن")
+		"bvr":
+			player.spawn_air(1500, 0, -2600, 0)
+			_spawn_bvr(4)
+			hud.banner("نبرد فراتر از دید — با N قفل کن و F شلیک کن", 6.0)
+		_:
+			player.spawn_air(1500, 0, -2400, 0)
+			_spawn_wave(1)
+			hud.banner("برتری هوایی — موج اول در راه است")
+
+	state = State.FLIGHT
+	_cam_pos = Vector3.ZERO
+	_cam_aim = Vector3.ZERO
+	hangar_ui.hide_hangar_ui()
+	hud.visible = true
+	controls.capture()
+	set_cam_mode(0)
+
+func _spawn_wave(n: int) -> void:
+	wave = n if n > 0 else wave + 1
+	var count := mini(2 + wave, 6)
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var ids: Array = specs.keys()
+	for i in count:
+		var ang := float(i) / count * PI * 1.2 + PI * 0.9
+		var pos := Vector3(Terrain.ENEMY.x + cos(ang) * 1100.0, rng.randf_range(1300, 2400), Terrain.ENEMY.z + sin(ang) * 1100.0)
+		var id: String = ids[rng.randi() % ids.size()]
+		_make_enemy(id, pos, 250.0, minf(1.2, 0.65 + wave * 0.09 + rng.randf() * 0.15))
+	hud.banner("موج %d — %d جت دشمن وارد شد" % [wave, count])
+
+func _make_enemy(id: String, pos: Vector3, heading: float, skill: float) -> void:
+	var spec: Dictionary = specs.get(id, {})
+	var ac := AircraftG.new()
+	ac.setup(spec, "red", false, str(spec.get("name", "دشمن")), terrain, effects)
+	ac.weapons = weapons
+	ac.died.connect(_on_aircraft_died)
+	flight_world.add_child(ac)
+	ac.spawn_air(pos.y - terrain.ground_height(pos.x, pos.z), heading, pos.x, pos.z)
+	ac.ai = AIPilotG.new(skill, self)
 	if _autotest:
-		_autotest_step(dt)
+		ac.ai.passive = true
+	aircraft.append(ac)
 
-# ---------- تست خودکار (بدون ورودی انسانی) ----------
-func _autotest_step(dt: float) -> void:
-	_t += dt
-	if player != null and player.st.alive:
-		player.st.throttle = 1.0
-		player.st.ab = _t > 2.0
-		# فاز نبرد: نشانه‌گیری به نزدیک‌ترین دشمن و شلیک
-		if _t > 3.0 and not enemies.is_empty():
-			var e: Node3D = enemies[0]
-			for en in enemies:
-				if en.global_position.distance_to(player.global_position) < e.global_position.distance_to(player.global_position):
-					e = en
-			var dir: Vector3 = (e.global_position - player.global_position).normalized()
-			var want := Basis.looking_at(dir, Vector3.UP)
-			player.st.basis = player.st.basis.slerp(want, minf(1.0, 6.0 * dt)).orthonormalized()
-			player._weapons(dt, {"fire": true})
-			if _t > 5.0 and player.lock_progress() >= 1.0 and player.missiles_left() == 4:
-				player._fire_missile()
-		if _t > 0.5 and _t < 2.5:
-			player.st.ang.z = -0.6   # غلت نمایشی
-		else:
-			player.st.ang.z = 0.0
-	for mark in [2.0, 5.0, 8.0]:
-		if _t >= mark and not mark in _shots:
-			_shots.append(mark)
-			var img := get_viewport().get_texture().get_image()
-			var dir := ProjectSettings.globalize_path("res://") + "shots"
-			DirAccess.make_dir_recursive_absolute(dir)
-			img.save_png("%s/shot_%d.png" % [dir, int(mark)])
-			print("AUTOTEST t=%.1f pos=%s v=%.0f" % [_t, str(player.st.pos.round()), player.st.v])
-	if _t > 14.0:
-		print("AUTOTEST done, kills=", kills, " enemies=", enemies.size())
-		get_tree().quit()
+func _spawn_ally(n: int) -> void:
+	var ids: Array = specs.keys()
+	for i in n:
+		var id: String = ids[i % ids.size()]
+		var spec: Dictionary = specs.get(id, {})
+		var ac := AircraftG.new()
+		ac.setup(spec, "blue", false, "متحد %d" % (i + 1), terrain, effects)
+		ac.weapons = weapons
+		ac.died.connect(_on_aircraft_died)
+		flight_world.add_child(ac)
+		ac.spawn_air(1400 + i * 250, 90, -2200 + i * 400, 200)
+		ac.ai = AIPilotG.new(0.9, self)
+		aircraft.append(ac)
 
-# ---------- ورودی سراسری ----------
-func _unhandled_input(e: InputEvent) -> void:
-	if e is InputEventKey and e.pressed and not e.echo:
-		match e.keycode:
-			KEY_ESCAPE:
-				if state == "flying":
-					_set_paused(true)
-				elif state == "paused":
-					_set_paused(false)
-			KEY_R:
-				if state == "dead" or state == "paused":
-					get_tree().reload_current_scene()
+func _spawn_bvr(n: int) -> void:
+	wave = 1
+	var roster: Array = []
+	for k in specs:
+		var s: Dictionary = specs[k]
+		var has_radar_msl: bool = false
+		for m in s.get("missiles", []):
+			if m.get("type", "ir") != "ir":
+				has_radar_msl = true
+		if s.has("radar") and has_radar_msl:
+			roster.append(k)
+	if roster.is_empty():
+		roster = specs.keys()
+	for i in n:
+		var pos := Vector3((i - (n - 1) / 2.0) * 1800.0, 3400 + randf() * 1400.0, player.st.pos.z + 21000.0 + randf() * 5000.0)
+		_make_enemy(str(roster[randi() % roster.size()]), pos, 180.0, 0.95 + randf() * 0.2)
 
-func _set_paused(p: bool) -> void:
-	state = "paused" if p else "flying"
-	get_tree().paused = p
-	_pause_layer.visible = p
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if p else Input.MOUSE_MODE_CAPTURED
-
-func _on_crashed(reason: String) -> void:
-	if state == "dead":
+# ---------- رویداد مرگ ----------
+func _on_aircraft_died(ac: Aircraft, killer) -> void:
+	audio.explosion(1.0)
+	if ac == player:
+		_end_mission(false, "سرنگون شدی")
 		return
-	state = "dead"
-	fx.explosion(player.st.pos, 2.0)
-	get_tree().paused = false
-	_dead_reason.text = reason
-	_dead_layer.visible = true
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	hud.banner("")
+	if ac.team == "red":
+		kills += 1
+		score += 100
+		if killer == player:
+			hud.kill_feed("جت دشمن سرنگون شد +۱۰۰")
+			hud.flash_hit()
+			audio.lock_beep()
+		else:
+			hud.kill_feed("متحدت یک دشمن را زد")
+	else:
+		hud.kill_feed("متحد سرنگون شد")
 
-# ---------- لایه‌های توقف/باخت ----------
-var _pause_layer: CanvasLayer
-var _dead_layer: CanvasLayer
-var _dead_reason: Label
+func _end_mission(win: bool, reason: String) -> void:
+	if state == State.RESULTS:
+		return
+	state = State.RESULTS
+	best = maxi(best, score)
+	UserDefaults.save_var("best", best)
+	controls.release()
+	hud.visible = false
+	hangar_ui.show_results(win, reason, score, kills, wave, best)
 
-func _build_overlays() -> void:
-	_pause_layer = CanvasLayer.new()
-	_pause_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	_pause_layer.layer = 5
-	_pause_layer.visible = false
-	var pv := VBoxContainer.new()
-	pv.add_theme_constant_override("separation", 10)
-	pv.add_child(_vlabel("توقف", 34, GREEN))
-	pv.add_child(_vlabel("Esc ادامه   |   R شروع دوباره", 17, Color(0.8, 0.85, 0.9)))
-	pv.add_child(_vlabel("↑↓ پیچ   A/D غلت   Q/E دُم   W/S گاز   Z افتربرنر", 15, Color(0.7, 0.8, 0.9)))
-	pv.add_child(_vlabel("G چرخ   V فلپ   X ترمز   Space توپ   F موشک   C فلر   1/2/3 دوربین", 15, Color(0.7, 0.8, 0.9)))
-	_pause_layer.add_child(_centered(pv))
-	add_child(_pause_layer)
+func to_hangar() -> void:
+	state = State.HANGAR
+	for ac in aircraft:
+		if is_instance_valid(ac):
+			ac.queue_free()
+	aircraft.clear()
+	player = null
+	hud.visible = false
+	controls.release()
+	controls.reset()
+	_refresh_hangar_jet()
+	hangar_ui.show_hangar_ui()
 
-	_dead_layer = CanvasLayer.new()
-	_dead_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	_dead_layer.layer = 5
-	_dead_layer.visible = false
-	var dv := VBoxContainer.new()
-	dv.add_theme_constant_override("separation", 12)
-	dv.add_child(_vlabel("مأموریت پایان یافت", 32, RED))
-	_dead_reason = _vlabel("", 17, Color(1.0, 0.75, 0.7))
-	dv.add_child(_dead_reason)
-	dv.add_child(_vlabel("R پرواز دوباره", 19, GREEN))
-	_dead_layer.add_child(_centered(dv))
-	add_child(_dead_layer)
+func resume_flight() -> void:
+	if state == State.PAUSED:
+		state = State.FLIGHT
+		hangar_ui.hide_pause()
+		controls.capture()
 
-func _centered(v: VBoxContainer) -> Control:
-	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.03, 0.05, 0.72)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var cc := CenterContainer.new()
-	cc.set_anchors_preset(Control.PRESET_FULL_RECT)
-	cc.add_child(v)
-	dim.add_child(cc)
-	return dim
+func on_escape() -> void:
+	if state == State.FLIGHT:
+		state = State.PAUSED
+		controls.release()
+		hangar_ui.show_pause()
+	elif state == State.PAUSED:
+		resume_flight()
 
-func _vlabel(txt: String, size: int, col: Color) -> Label:
-	var l := Label.new()
-	l.text = txt
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.add_theme_font_size_override("font_size", size)
-	l.add_theme_color_override("font_color", col)
-	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-	l.add_theme_constant_override("outline_size", 5)
-	return l
+# ---------- اکشن‌های بازیکن ----------
+func player_action(action: String) -> void:
+	if player == null or not player.alive:
+		return
+	match action:
+		"missile":
+			if not player.fire_missile():
+				hud.banner("قفل فعال نیست یا موشک نداری")
+		"bomb":
+			weapons.drop_bomb(player.global_position + player.global_basis * Vector3(0, -1.9, -1.0), player.st.vel, player)
+		"rocket":
+			for i in 6:
+				var dir := (-player.global_basis.z + Vector3(randf_range(-0.02, 0.02), randf_range(-0.02, 0.02), 0)).normalized()
+				var bpos := player.global_position + player.global_basis * Vector3(0, -1.2, -5.0)
+				weapons.fire_bullet(bpos, dir, player)
+		"flares":
+			player.drop_flares()
+		"radar":
+			_lock_nearest()
+
+func _lock_nearest() -> void:
+	var best_ac: Aircraft = null
+	var best_score := -1e12
+	for ac in aircraft:
+		if ac == player or not ac.alive or ac.team != "red":
+			continue
+		var to_ac: Vector3 = ac.global_position - player.global_position
+		var d := to_ac.length()
+		if d > 14000:
+			continue
+		var fwd: Vector3 = -player.global_basis.z
+		var dot: float = fwd.dot(to_ac.normalized())
+		if dot < 0.55:
+			continue
+		var sc := dot * 2.0 - d / 14000.0
+		if sc > best_score:
+			best_score = sc
+			best_ac = ac
+	if best_ac != null:
+		player.lock_target = best_ac
+		player.lock_t = 1.5
+		audio.lock_beep()
+		hud.banner("قفل: " + best_ac.display_name)
+	else:
+		hud.banner("هدفی در کون قفل نیست")
+	player._msl_cd = 0.0
+
+func set_cam_mode(m: int) -> void:
+	cam_mode = m
+	cockpit.visible = (m == 0)
+	if m == 0:
+		camera.near = 0.05
+	else:
+		camera.near = 0.3
+
+# ---------- حلقه اصلی ----------
+func _physics_process(dt: float) -> void:
+	if _autotest:
+		_autotest_tick(dt)
+	if state == State.FLIGHT:
+		_update_flight(dt)
+	elif state == State.HANGAR:
+		hangar.update_cam(dt, camera)
+
+func _update_flight(dt: float) -> void:
+	if player == null:
+		return
+	if player.ai == null:
+		# فقط وقتی خلبان انسانی (هوش مصنوعی ندارد) ورودی موس اعمال شود
+		var inp: Dictionary = controls.build_input(player, dt)
+		for k in inp:
+			player.input[k] = inp[k]
+	ground_defense.update(dt, aircraft)
+	_auto_lock(dt)
+	var red_alive := 0
+	for ac in aircraft:
+		if ac.alive and ac.team == "red":
+			red_alive += 1
+	if red_alive == 0 and (mission_type == "air" or mission_type == "team"):
+		if next_wave_t <= 0.0:
+			next_wave_t = 6.0
+			hud.banner("موج پاکسازی شد — موج بعدی تا ۶ ثانیه…")
+	if next_wave_t > 0.0:
+		next_wave_t -= dt
+		if next_wave_t <= 0.0:
+			_spawn_wave(0)
+	if mission_type == "bvr" and red_alive == 0:
+		_end_mission(true, "همه دشمنان بی‌آر سرنگون شدند!")
+	_update_camera(dt)
+	if cam_mode == 0:
+		cockpit.update_from(dt, player, self)
+	audio.set_engine(player.st, true)
+	effects.process(dt)
+	sky.update(camera, dt)
+
+func _autotest_tick(dt: float) -> void:
+	_autotest_t += dt
+	if player != null and player.alive:
+		player.spawn_protect = 5.0
+		if state != State.FLIGHT:
+			start_mission("air")
+		# خلبان خودکار = همان هوش مصنوعی بازی — تست دوطرفه
+		if player.ai == null:
+			player.ai = AIPilotG.new(1.0, self)
+		# در ثانیه ۴۰: تلپورت پشت نزدیک‌ترین دشمن — تست زنجیره کشتن
+		if _autotest_t >= 15.0 and _autotest_t < 15.5 and not _tp_done:
+			_tp_done = true
+			var tgt: Aircraft = null
+			var bd2 := 1e12
+			for ac2 in aircraft:
+				if ac2.alive and ac2.team == "red":
+					var dd3: float = ac2.global_position.distance_to(player.global_position)
+					if dd3 < bd2:
+						bd2 = dd3
+						tgt = ac2
+			if tgt != null:
+				var behind: Vector3 = tgt.global_position - tgt.global_basis * Vector3(0, 0, 60) + Vector3(0, 30, 0)
+				player.st.pos = behind
+				player.st.vel = tgt.st.vel * 1.05
+				player.st.quat = tgt.st.quat
+				print("[AUTOTEST] teleport behind enemy for kill-chain test")
+	var vv: float = player.st.V if player != null else 0.0
+	var nd := -1.0
+	if player != null:
+		for ac in aircraft:
+			if ac.alive and ac.team == "red":
+				var dd2: float = ac.global_position.distance_to(player.global_position)
+				if nd < 0.0 or dd2 < nd:
+					nd = dd2
+	var reds := 0
+	for ac in aircraft:
+		if ac.alive and ac.team == "red":
+			reds += 1
+	if fmod(_autotest_t, 5.0) < dt:
+		print("[AUTOTEST] t=%.0f V=%.0f alt=%.0f kills=%d enemies=%d ndist=%.0f" % [
+			_autotest_t, vv, player.st.pos.y if player != null else 0.0, kills, reds, nd])
+	if _autotest_t > 45.0:
+		print("[AUTOTEST-DONE] kills=%d score=%d" % [kills, score])
+		get_tree().quit(0)
+
+func _auto_lock(dt: float) -> void:
+	if player.lock_target != null and is_instance_valid(player.lock_target) and player.lock_target.alive:
+		player.lock_t += dt
+		return
+	var best_ac: Aircraft = null
+	var bd := 5000.0
+	var fwd: Vector3 = -player.global_basis.z
+	for ac in aircraft:
+		if ac == player or not ac.alive or ac.team != "red":
+			continue
+		var to_ac: Vector3 = ac.global_position - player.global_position
+		var d := to_ac.length()
+		if d < bd and fwd.dot(to_ac.normalized()) > 0.94:
+			bd = d
+			best_ac = ac
+	if best_ac != null:
+		if player.lock_target != best_ac:
+			player.lock_t = 0.0
+		player.lock_target = best_ac
+		player.lock_t = minf(player.lock_t + dt, 2.0)
+	else:
+		player.lock_target = null
+		player.lock_t = 0.0
+
+func _update_camera(dt: float) -> void:
+	var st: Dictionary = player.st
+	var look: Vector2 = controls.look
+	if Time.get_ticks_msec() - controls.last_move_ms > 1600:
+		look = look.lerp(Vector2.ZERO, minf(1.0, dt * 4.0))
+		controls.look = look
+	var shake: float = (0.25 if st.stalled else 0.0) + maxf(0.0, st.g_force - 6.5) * 0.05
+	if cam_mode == 0:
+		var head := Vector3(0, 0.85, 1.2)
+		camera.global_position = player.global_position + (player.global_basis * head)
+		var look_q := Quaternion(Vector3.UP, look.x) * Quaternion(Vector3.RIGHT, look.y)
+		camera.global_basis = player.global_basis * Basis(look_q)
+	else:
+		var back := 17.0 if cam_mode == 1 else 34.0
+		var up := 4.6 if cam_mode == 1 else 9.0
+		var target_pos: Vector3 = player.global_position + player.global_basis * Vector3(0, up, back)
+		if _cam_pos == Vector3.ZERO:
+			_cam_pos = target_pos
+		_cam_pos = _cam_pos.lerp(target_pos, minf(1.0, dt * 6.5))
+		camera.global_position = _cam_pos
+		var aim := player.global_position + player.global_basis * Vector3(0, 0, -45)
+		if _cam_aim == Vector3.ZERO:
+			_cam_aim = aim
+		_cam_aim = _cam_aim.lerp(aim, minf(1.0, dt * 6.5))
+		camera.look_at(_cam_aim)
+	if shake > 0.01:
+		camera.global_position += Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * shake
+	var base_fov := 76.0 if cam_mode == 0 else 70.0
+	var target_fov := base_fov + clampf((st.V - 260.0) / 780.0, 0.0, 1.0) * 9.0 + (2.5 if st.ab else 0.0)
+	camera.fov = lerpf(camera.fov, target_fov, minf(1.0, dt * 4.5))
+
+func on_bomb_impact(pos: Vector3, owner) -> void:
+	for t in _strike_targets:
+		if not t.alive:
+			continue
+		if pos.distance_to(t.pos) < 55.0:
+			t.hp -= 140.0
+			if t.hp <= 0.0:
+				t.alive = false
+				effects.explosion(t.pos, 2.4)
+				score += 100
+				hud.kill_feed("هدف زمینی نابود شد +۱۰۰")
+				_strike_left -= 1
+				if _strike_left <= 0 and mission_type == "strike":
+					_end_mission(true, "بیس دشمن به‌طور کامل نابود شد!")
+			else:
+				effects.explosion(pos, 1.2)
+			break

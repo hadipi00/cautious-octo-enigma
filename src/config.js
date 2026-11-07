@@ -30,7 +30,7 @@ export const QUALITY = {
     maxParticles: 900, autoRes: true,
   },
   ultra: {
-    label: 'فوق',   pixelCap: 2.0,  antialias: true,  shadows: true,  shadowSize: 4096,
+    label: 'فوق — 4K', pixelCap: 2.5,  antialias: true,  shadows: true,  shadowSize: 4096,
     fogNear: 4200,  fogFar: 27000,  terrainSeg: 512,  clouds: 38,  rocks: 320,  trees: 480,
     maxParticles: 1600, autoRes: false,
   },

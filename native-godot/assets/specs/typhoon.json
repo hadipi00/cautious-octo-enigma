@@ -1,0 +1,78 @@
+{
+  "id": "typhoon",
+  "name": "EF-2000 Typhoon",
+  "nation": "EUROPE",
+  "role": "dogfighter",
+  "mass": 11000,
+  "fuelCap": 4900,
+  "thrustMil": 120000,
+  "thrustAB": 180000,
+  "burnMil": 1.5,
+  "burnAB": 7.0,
+  "wingArea": 50.0,
+  "wingSpan": 10.95,
+  "len": 15.96,
+  "CL0": 0.04,
+  "CLa": 4.9,
+  "aStall": 21,
+  "CD0": 0.02,
+  "kInd": 0.1,
+  "maxG": 9,
+  "rollRate": 290,
+  "pitchRate": 26,
+  "yawRate": 11,
+  "gearH": 2.2,
+  "bellyH": 1.1,
+  "guns": [
+    {
+      "name": "Mauser BK-27",
+      "ammo": 150,
+      "cal": 27
+    }
+  ],
+  "missiles": [
+    {
+      "name": "AIM-120C",
+      "type": "arh",
+      "count": 2,
+      "range": 18000
+    },
+    {
+      "name": "IRIS-T",
+      "type": "ir",
+      "count": 2,
+      "range": 9000
+    }
+  ],
+  "bombs": 2,
+  "rockets": 0,
+  "flares": 72,
+  "chaff": 72,
+  "stats": {
+    "speed": 0.9,
+    "agility": 0.97,
+    "firepower": 0.9,
+    "armor": 0.82
+  },
+  "visual": {
+    "wingType": "delta",
+    "tailType": "single",
+    "engines": 2,
+    "canards": true,
+    "body": "#7d8894",
+    "accent": "#4d5a68",
+    "fusW": 1.0
+  },
+  "cockpit": {
+    "style": "west",
+    "panel": "#2b3138",
+    "sideStick": true,
+    "mfds": 2
+  },
+  "hp": 90,
+  "radar": {
+    "range": 120000,
+    "gimbal": 70
+  },
+  "rcs": 2.5
+}

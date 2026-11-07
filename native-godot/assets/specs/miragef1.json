@@ -1,0 +1,77 @@
+{
+  "id": "miragef1",
+  "name": "Mirage F1C",
+  "nation": "FRANCE",
+  "role": "multirole",
+  "mass": 7400,
+  "fuelCap": 3300,
+  "thrustMil": 41000,
+  "thrustAB": 49200,
+  "burnMil": 1.1,
+  "burnAB": 4.2,
+  "wingArea": 25.0,
+  "wingSpan": 8.4,
+  "len": 15.3,
+  "CL0": 0.03,
+  "CLa": 4.6,
+  "aStall": 15,
+  "CD0": 0.022,
+  "kInd": 0.12,
+  "maxG": 7,
+  "rollRate": 220,
+  "pitchRate": 16,
+  "yawRate": 7,
+  "gearH": 2.1,
+  "bellyH": 1.05,
+  "guns": [
+    {
+      "name": "2×DEFA 553",
+      "ammo": 250,
+      "cal": 30
+    }
+  ],
+  "missiles": [
+    {
+      "name": "R530F",
+      "type": "sarh",
+      "count": 2,
+      "range": 14000
+    },
+    {
+      "name": "R550 Magic",
+      "type": "ir",
+      "count": 2,
+      "range": 7000
+    }
+  ],
+  "bombs": 2,
+  "rockets": 0,
+  "flares": 40,
+  "chaff": 40,
+  "stats": {
+    "speed": 0.7,
+    "agility": 0.66,
+    "firepower": 0.65,
+    "armor": 0.68
+  },
+  "visual": {
+    "wingType": "swept",
+    "tailType": "single",
+    "engines": 1,
+    "body": "#7d8a99",
+    "accent": "#59646f",
+    "fusW": 1.0
+  },
+  "cockpit": {
+    "style": "west",
+    "panel": "#2b3138",
+    "sideStick": false,
+    "mfds": 1
+  },
+  "hp": 78,
+  "radar": {
+    "range": 62000,
+    "gimbal": 55
+  },
+  "rcs": 4.5
+}

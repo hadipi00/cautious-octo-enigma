@@ -5,9 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AIRDOM — شبیه‌ساز نبرد هوایی</title>
 <style>
-  :root{ --hud:#9dffb0; --hudWarn:#ffb340; --hudRed:#ff5050; --panel:#101623; --line:#2a3a55; }
+  :root{
+    --hud:#9dffb0; --hudWarn:#ffb340; --hudRed:#ff5050;
+    --gold:#e8b64c; --goldDim:#b98d33;
+    --panel:rgba(10,14,20,.82); --panel2:rgba(16,22,32,.9); --line:rgba(160,180,210,.18);
+  }
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Segoe UI",Tahoma,sans-serif;user-select:none}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;
+    font-family:"Segoe UI",Tahoma,sans-serif;user-select:none}
   #c{position:fixed;inset:0;width:100%;height:100%;display:block}
 
   /* ================= HUD ================= */
@@ -83,56 +88,116 @@
   #fpsBadge{position:absolute;right:10px;top:8px;font-size:12px;color:#fff;opacity:.65;text-shadow:0 1px 2px #000}
   #camLabel{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);font-size:12px;opacity:.6}
 
-  /* ================= MENU ================= */
-  #menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;
-        background:radial-gradient(ellipse at 30% 20%,rgba(20,34,58,.9),rgba(5,8,14,.95))}
-  .panel{width:min(620px,94vw);max-height:94vh;overflow-y:auto;background:rgba(13,17,26,.95);
-         border:1px solid var(--line);border-radius:16px;padding:26px 32px;color:#dfe7f2;
-         box-shadow:0 12px 70px rgba(0,0,0,.65)}
-  .panel h1{font-size:40px;letter-spacing:11px;color:#7ecbff;font-weight:800;direction:ltr;text-align:center;margin-bottom:0}
-  .ptitle{font-size:24px;color:#7ecbff;text-align:center;margin-bottom:14px;font-weight:700}
-  .panel .sub{text-align:center;color:#8fa3bd;margin-bottom:18px;font-size:13px}
-  .btn{display:block;width:100%;padding:12px;margin:8px 0;background:#182238;border:1px solid #31486e;
-       border-radius:10px;color:#dfe7f2;font-size:15.5px;font-family:inherit;cursor:pointer;text-align:center;transition:all .15s}
-  .btn:hover{background:#22345a;border-color:#4d6fa3;transform:translateY(-1px)}
-  .btn.primary{background:#14406b;border-color:#2c6cb0;font-size:17px;font-weight:600}
-  .btn.primary:hover{background:#1a5288}
-  .row{display:flex;gap:10px;align-items:center;margin:9px 0}
-  .row label{flex:0 0 120px;color:#9fb2ca;font-size:13.5px}
-  .row select,.row input{flex:1;background:#0d1524;border:1px solid #31486e;color:#dfe7f2;
-       border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13.5px}
-  /* آشیانه */
-  #hangar{border:1px solid #22304a;border-radius:12px;background:#0c1220;padding:14px 16px;margin:12px 0}
-  #hangarNav{display:flex;justify-content:center;gap:14px;align-items:center;margin-bottom:8px}
-  #hangarNav button{background:#182238;border:1px solid #31486e;color:#dfe7f2;border-radius:8px;
-                    width:42px;height:32px;font-size:16px;cursor:pointer}
-  #hangarNav button:hover{background:#22345a}
-  #hangarCar{font-size:13px;color:#8fa3bd}
-  #hangarPrev .planeName{font-size:20px;font-weight:700;color:#cfe3ff;text-align:center}
-  #hangarPrev .planeMeta{text-align:center;color:#8fa3bd;font-size:12px;margin:2px 0 10px}
-  #hangarPrev .statRow{display:flex;align-items:center;margin:4px 0;font-size:13px}
-  #hangarPrev .statRow span{flex:0 0 64px;color:#9fb2ca}
-  #hangarPrev .statRow b{font-weight:400;letter-spacing:2px;color:#7ecbff;font-size:12px}
-  #hangarPrev .planeArm{text-align:center;color:#7a8fa8;font-size:11.5px;margin-top:8px}
-  .keys{margin-top:12px;border-top:1px solid #22304a;padding-top:11px;font-size:12px;color:#9fb2ca;
-        display:grid;grid-template-columns:1fr 1fr;gap:3px 16px;direction:rtl}
+  /* ================= صفحه بارگذاری ================= */
+  #loading{position:fixed;inset:0;z-index:50;background:radial-gradient(ellipse at 50% 30%,#141c2a,#05070b 75%);
+           display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+           transition:opacity .6s;color:#dfe7f2}
+  #loading .logo{font-size:58px;font-weight:800;letter-spacing:16px;color:var(--gold);
+           direction:ltr;text-shadow:0 0 34px rgba(232,182,76,.35)}
+  #loading .sub{color:#8fa3bd;font-size:14px;letter-spacing:2px}
+  #loadBarWrap{width:min(430px,80vw);height:8px;background:rgba(255,255,255,.08);border-radius:6px;overflow:hidden}
+  #loadBar{height:100%;width:2%;background:linear-gradient(90deg,var(--goldDim),var(--gold));
+           border-radius:6px;transition:width .25s;box-shadow:0 0 12px rgba(232,182,76,.6)}
+  #loadTip{color:#7186a0;font-size:12.5px;min-height:18px}
+
+  /* ================= آشیانه (منوی اصلی) ================= */
+  #hangarUI{position:fixed;inset:0;z-index:10;display:none;pointer-events:none;
+            font-size:14px;color:#dfe7f2}
+  #hangarUI>*{pointer-events:auto}
+  #topbar{position:absolute;top:0;left:0;right:0;height:58px;display:flex;align-items:center;
+          justify-content:space-between;padding:0 22px;
+          background:linear-gradient(180deg,rgba(5,8,12,.88),rgba(5,8,12,0));pointer-events:none}
+  #topbar .logo{font-size:24px;font-weight:800;letter-spacing:8px;color:var(--gold);direction:ltr}
+  #topbar .ver{font-size:11px;color:#8fa3bd;margin-inline-start:10px;letter-spacing:1px}
+  #pilotTag{display:flex;gap:18px;align-items:center;font-size:13px;color:#b9c6d8;
+            background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 16px}
+  #pilotTag b{color:#ffe2a0}
+
+  #leftPanel{position:absolute;top:70px;bottom:86px;left:16px;width:305px;max-height:calc(100vh - 160px);
+             overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+             padding:16px 14px;backdrop-filter:blur(10px)}
+  #leftPanel::-webkit-scrollbar{width:8px}
+  #leftPanel::-webkit-scrollbar-thumb{background:#2c3a52;border-radius:4px}
+  .secTitle{font-size:12px;letter-spacing:2px;color:#8fa3bd;margin:2px 0 10px;text-align:center}
+  .battleBtn{display:flex;gap:12px;align-items:center;width:100%;padding:11px 12px;margin:7px 0;
+             background:linear-gradient(180deg,rgba(34,44,62,.85),rgba(20,27,40,.85));
+             border:1px solid #33445f;border-radius:11px;color:#dfe7f2;font-family:inherit;
+             cursor:pointer;text-align:right;transition:all .15s}
+  .battleBtn:hover{border-color:var(--gold);transform:translateX(-3px);
+             box-shadow:0 4px 18px rgba(0,0,0,.4)}
+  .battleBtn .ic{font-size:22px;filter:drop-shadow(0 0 6px rgba(232,182,76,.35))}
+  .battleBtn .tt{font-size:14.5px;font-weight:600}
+  .battleBtn .ss{font-size:11px;color:#8fa3bd;margin-top:2px}
+  #leftPanel hr{border:none;border-top:1px solid var(--line);margin:13px 0}
+  .row{display:flex;gap:8px;align-items:center;margin:8px 0}
+  .row label{flex:0 0 92px;color:#9fb2ca;font-size:12.5px}
+  .row select,.row input{flex:1;background:#0d1524;border:1px solid #33445f;color:#dfe7f2;
+       border-radius:8px;padding:7px 9px;font-family:inherit;font-size:12.5px}
+  .row input[type=range]{padding:0;accent-color:var(--gold)}
+  #mpRow{display:flex;gap:6px;margin:8px 0}
+  #mpRow input{min-width:0;background:#0d1524;border:1px solid #33445f;color:#dfe7f2;
+       border-radius:8px;padding:8px 9px;font-family:inherit;font-size:12px}
+  #mpStatus{text-align:center;font-size:12px;color:#ffd27a;min-height:16px}
+  details.keysWrap{margin-top:10px;font-size:12px;color:#9fb2ca}
+  details.keysWrap summary{cursor:pointer;color:#7ecbff;font-size:12.5px;text-align:center;padding:4px}
+  .keys{margin-top:9px;border-top:1px solid var(--line);padding-top:10px;display:grid;
+        grid-template-columns:1fr;gap:3px 14px;direction:rtl}
   .keys b{color:#cfe3ff;font-family:Consolas,monospace;font-weight:600;direction:ltr;unicode-bidi:embed}
-  .hint{font-size:12px;color:#6f829c;margin-top:10px;text-align:center}
-  .reason{color:#ff9a8a;text-align:center;margin:10px 0;font-size:14px}
-  .endStats{display:flex;justify-content:center;gap:18px;margin:12px 0;font-size:14px;color:#9fb2ca;flex-wrap:wrap}
-  .endStats b{color:#cfe3ff}
+
+  #rightPanel{position:absolute;top:70px;right:16px;width:280px;background:var(--panel);
+              border:1px solid var(--line);border-radius:14px;padding:16px;backdrop-filter:blur(10px)}
+  #jetTier{display:inline-block;font-size:11px;letter-spacing:1px;color:#0c1118;background:var(--gold);
+           border-radius:6px;padding:2px 9px;font-weight:700;margin-bottom:8px}
+  #jetName{font-size:19px;font-weight:700;color:#eef4fb;direction:ltr;text-align:right}
+  #jetMeta{color:#8fa3bd;font-size:12px;margin:3px 0 12px}
+  .statRow{display:flex;align-items:center;margin:6px 0;font-size:12.5px}
+  .statRow span{flex:0 0 58px;color:#9fb2ca}
+  .statBar{flex:1;height:7px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+  .statBar i{display:block;height:100%;background:linear-gradient(90deg,var(--goldDim),var(--gold));
+             border-radius:4px;box-shadow:0 0 8px rgba(232,182,76,.4)}
+  #jetArm{margin-top:12px;border-top:1px solid var(--line);padding-top:10px;
+          color:#7a8fa8;font-size:11.5px;line-height:1.8}
+
+  #bottomBar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+             display:flex;align-items:center;gap:16px;background:var(--panel);
+             border:1px solid var(--line);border-radius:14px;padding:10px 22px;backdrop-filter:blur(10px)}
+  #bottomBar button{background:#182238;border:1px solid #33445f;color:#dfe7f2;border-radius:9px;
+                    width:44px;height:36px;font-size:17px;cursor:pointer;transition:all .15s}
+  #bottomBar button:hover{background:#22345a;border-color:var(--gold)}
+  #jetCarName{min-width:230px;text-align:center;font-size:15px;font-weight:600;color:#cfe3ff;direction:ltr}
+  #jetCarIdx{color:#8fa3bd;font-size:12px}
+  #dragHint{position:absolute;bottom:20px;right:22px;color:#6f829c;font-size:11.5px;letter-spacing:1px}
+
+  /* ================= پنل‌های عمودی (توقف/پایان) ================= */
+  .overlay{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
+           background:rgba(3,5,9,.55);backdrop-filter:blur(3px)}
+  .panel{width:min(560px,94vw);max-height:94vh;overflow-y:auto;background:var(--panel2);
+         border:1px solid var(--line);border-radius:18px;padding:28px 34px;color:#dfe7f2;
+         box-shadow:0 18px 80px rgba(0,0,0,.7);text-align:center}
+  .ptitle{font-size:24px;color:#7ecbff;margin-bottom:14px;font-weight:700}
+  .btn{display:block;width:100%;padding:12px;margin:8px 0;background:#182238;border:1px solid #33445f;
+       border-radius:10px;color:#dfe7f2;font-size:15.5px;font-family:inherit;cursor:pointer;
+       text-align:center;transition:all .15s}
+  .btn:hover{background:#22345a;border-color:#4d6fa3;transform:translateY(-1px)}
+  .btn.primary{background:linear-gradient(180deg,#c89a3f,#a5792a);border-color:#e8c87c;
+       color:#14100a;font-size:17px;font-weight:700;box-shadow:0 4px 20px rgba(232,182,76,.35)}
+  .btn.primary:hover{background:linear-gradient(180deg,#e0b355,#b8892f)}
+  .hint{font-size:12px;color:#6f829c;margin-top:10px}
+  .reason{color:#ff9a8a;margin:10px 0;font-size:15px}
+  #resTitle{font-size:44px;font-weight:800;letter-spacing:6px;direction:ltr;margin-bottom:4px}
+  #resTitle.win{color:#9dffb0;text-shadow:0 0 30px rgba(157,255,176,.4)}
+  #resTitle.lose{color:#ff8a7a;text-shadow:0 0 30px rgba(255,110,90,.35)}
+  #resStats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}
+  #resStats .cell{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:12px 6px}
+  #resStats .cell b{display:block;font-size:24px;color:#ffe2a0;font-weight:700}
+  #resStats .cell span{font-size:11.5px;color:#8fa3bd}
   .hidden{display:none!important}
-  #loadMsg{color:#8fa3bd;text-align:center;padding:60px 0;font-size:15px}
-  #mpRow{display:flex;gap:8px;margin:10px 0}
-  #mpRow input{flex:1;background:#0d1524;border:1px solid #31486e;color:#dfe7f2;border-radius:8px;padding:9px 12px;font-family:inherit;font-size:13.5px}
-  #mpStatus{text-align:center;font-size:13px;color:#ffd27a;min-height:18px}
-  .ghLink{text-align:center;margin-top:10px;font-size:11.5px}
-  .ghLink a{color:#5b7ba0;text-decoration:none}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 
+<!-- ================= HUD پرواز ================= -->
 <div id="hud">
   <div id="f3"></div>
   <div id="fpsBadge"></div>
@@ -162,74 +227,125 @@
 <div id="vignette"></div>
 <div id="dmg"></div>
 
-<div id="menu">
-  <div class="panel" id="menuPanel">
-    <h1>AIRDOM</h1>
-    <div class="sub">شبیه‌ساز نبرد هوایی — نسخه ۲.۵ «موس‌ایم» — ۲۴ جنگنده — هسته WASM</div>
-    <div id="loadMsg">در حال بارگذاری…</div>
-    <div id="menuBody" class="hidden">
-      <div id="hangar">
-        <div id="hangarNav">
-          <button id="hangarLeft">◀</button>
-          <span id="hangarCar"></span>
-          <button id="hangarRight">▶</button>
-        </div>
-        <div id="hangarPrev"></div>
-      </div>
-      <button class="btn primary" id="btnAir">✈ برتری هوایی — موج‌های دشمن</button>
-      <button class="btn" id="btnBvr">📡 نبرد بی‌آر — رادار و موشک دوربرد (۲۵km)</button>
-      <button class="btn" id="btnStrike">💥 حمله به بیس زمینی (SAM فعال)</button>
-      <button class="btn" id="btnTeam">🤝 نبرد تیمی — با ۲ متحد</button>
-      <button class="btn" id="btnFree">🛫 پرواز آزاد + فرود روی باند</button>
-      <div style="border-top:1px solid #22304a;margin:14px 0 6px"></div>
-      <div id="mpRow">
-        <input id="mpName" placeholder="اسم خلبان" maxlength="16" style="flex:0 0 130px">
-        <input id="mpIp" placeholder="IP میزبان برای بازی گروهی WiFi (مثلاً 192.168.1.5)">
-        <button class="btn" id="btnMp" style="width:auto;margin:0;padding:9px 16px">🌐 اتصال</button>
-      </div>
-      <div id="mpStatus"></div>
-      <div class="row">
-        <label for="qualitySel">کیفیت گرافیک</label>
-        <select id="qualitySel">
-          <option value="low">کم — برای گرافیک ضعیف</option>
-          <option value="medium">متوسط</option>
-          <option value="high" selected>بالا</option>
-          <option value="ultra">فوق</option>
-        </select>
-      </div>
-      <div class="row">
-        <label for="resScaleSel">رزولوشن دینامیک</label>
-        <select id="resScaleSel">
-          <option value="1" selected>روشن (تضمین ۶۰ فریم)</option>
-          <option value="0">خاموش</option>
-        </select>
-      </div>
-      <h2 style="font-size:16px;color:#7ecbff;margin:14px 0 6px">راهنمای کنترل</h2>
+<!-- ================= بارگذاری ================= -->
+<div id="loading">
+  <div class="logo">AIRDOM</div>
+  <div class="sub">شبیه‌ساز نبرد هوایی — هسته WASM — ۲۴ جنگنده</div>
+  <div id="loadBarWrap"><div id="loadBar"></div></div>
+  <div id="loadTip">در حال گرم‌کردن موتورها…</div>
+</div>
+
+<!-- ================= آشیانه / منوی اصلی ================= -->
+<div id="hangarUI">
+  <div id="topbar">
+    <div style="display:flex;align-items:baseline"><span class="logo">AIRDOM</span><span class="ver">v3.0 «WARBIRD»</span></div>
+    <div id="pilotTag">🧑‍✈️ <b id="pilotName">خلبان</b> · 🏆 رکورد <b id="bestScore">0</b></div>
+  </div>
+
+  <div id="leftPanel">
+    <div class="secTitle">── انتخاب نبرد ──</div>
+    <button class="battleBtn" id="btnAir"><span class="ic">✈</span><span><span class="tt">برتری هوایی</span><br><span class="ss">موج‌های بی‌پایان جت دشمن</span></span></button>
+    <button class="battleBtn" id="btnBvr"><span class="ic">📡</span><span><span class="tt">نبرد بی‌آر</span><br><span class="ss">رادار و موشک دوربرد — ۲۵ کیلومتر</span></span></button>
+    <button class="battleBtn" id="btnStrike"><span class="ic">💥</span><span><span class="tt">حمله به بیس</span><br><span class="ss">اهداف زمینی — SAM فعال</span></span></button>
+    <button class="battleBtn" id="btnTeam"><span class="ic">🤝</span><span><span class="tt">نبرد تیمی</span><br><span class="ss">با ۲ متحد در برابر موج دشمن</span></span></button>
+    <button class="battleBtn" id="btnFree"><span class="ic">🛫</span><span><span class="tt">پرواز آزاد</span><br><span class="ss">گشت‌زنی + فرود روی باند</span></span></button>
+    <hr>
+    <div class="row">
+      <label for="qualitySel">گرافیک</label>
+      <select id="qualitySel">
+        <option value="low">کم</option>
+        <option value="medium">متوسط</option>
+        <option value="high" selected>بالا</option>
+        <option value="ultra">فوق — 4K</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="resScaleSel">رزولوشن پویا</label>
+      <select id="resScaleSel">
+        <option value="1" selected>روشن (تضمین ۶۰ فریم)</option>
+        <option value="0">خاموش</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="sensRange">حساسیت موس</label>
+      <input type="range" id="sensRange" min="30" max="220" value="100">
+      <span id="sensVal" style="width:34px;font-size:12px;color:#9fb2ca">۱۰۰٪</span>
+    </div>
+    <hr>
+    <div id="mpRow">
+      <input id="mpName" placeholder="اسم خلبان" maxlength="16" style="flex:0 0 110px">
+      <input id="mpIp" placeholder="IP میزبان WiFi (192.168.x.x)">
+      <button class="btn" id="btnMp" style="width:auto;margin:0;padding:8px 14px">🌐</button>
+    </div>
+    <div id="mpStatus"></div>
+    <details class="keysWrap">
+      <summary>⌨ راهنمای کنترل</summary>
       <div class="keys">
         <span><b>موس</b> — اهرم پرواز: دماغه به سمت نشانگر می‌رود</span>
         <span><b>Ctrl (نگه‌دار)</b> — موس = سر خلبان (نگاه آزاد)</span>
-        <span><b>↑ / ↓</b> — دماغه (کمکی)</span>
-        <span><b>A / D</b> — غلت (کمکی)</span>
-        <span><b>Q / E</b> — دُم</span>
-        <span><b>W / S</b> — گاز</span>
-        <span><b>Z</b> — افتربرنر</span>
-        <span><b>N</b> — حالت رادار (جستجو/TWS/قفل)</span>
-        <span><b>Space / کلیک</b> — توپ</span>
-        <span><b>F</b> — موشک (راداری/حرارتی خودکار)</span>
-        <span><b>B</b> — بمب</span>
-        <span><b>R</b> — راکت</span>
-        <span><b>C</b> — فلر + چف</span>
-        <span><b>G</b> — چرخ فرود</span>
-        <span><b>V</b> — فلپ</span>
-        <span><b>X</b> — ترمز هوایی</span>
-        <span><b>1/2/3</b> — دوربین</span>
-        <span><b>Home</b> — وسط کردن استیک و سر</span>
-        <span><b>I/J/K/L</b> — چرخش سر در کابین</span>
+        <span><b>اسکرول</b> — گاز</span>
+        <span><b>W / S</b> — گاز &nbsp;·&nbsp; <b>Z</b> — افتربرنر</span>
+        <span><b>↑↓ / A D / Q E</b> — دماغه / غلت / دُم (کمکی)</span>
+        <span><b>کلیک / Space</b> — توپ</span>
+        <span><b>F</b> — موشک &nbsp;·&nbsp; <b>B</b> — بمب &nbsp;·&nbsp; <b>R</b> — راکت</span>
+        <span><b>C</b> — فلر+چف &nbsp;·&nbsp; <b>N</b> — رادار</span>
+        <span><b>G</b> — چرخ &nbsp;·&nbsp; <b>V</b> — فلپ &nbsp;·&nbsp; <b>X</b> — ترمز</span>
+        <span><b>1/2/3</b> — کابین / تعقیب / دور</span>
+        <span><b>Home</b> — وسط کردن استیک</span>
         <span><b>Esc</b> — توقف</span>
-        <span><b>F3</b> — پوشش کارایی</span>
       </div>
-      <div class="ghLink"><a href="https://github.com/hadipi00/cautious-octo-enigma" target="_blank">سورس روی GitHub</a></div>
+    </details>
+    <div class="ghLink" style="text-align:center;margin-top:10px;font-size:11px">
+      <a href="https://github.com/hadipi00/cautious-octo-enigma" target="_blank" style="color:#5b7ba0;text-decoration:none">سورس روی GitHub</a>
     </div>
+  </div>
+
+  <div id="rightPanel">
+    <span id="jetTier">TIER —</span>
+    <div id="jetName">—</div>
+    <div id="jetMeta">—</div>
+    <div class="statRow"><span>سرعت</span><div class="statBar"><i id="stSpeed"></i></div></div>
+    <div class="statRow"><span>چابکی</span><div class="statBar"><i id="stAgility"></i></div></div>
+    <div class="statRow"><span>آتش</span><div class="statBar"><i id="stFire"></i></div></div>
+    <div class="statRow"><span>بدنه</span><div class="statBar"><i id="stArmor"></i></div></div>
+    <div id="jetArm">—</div>
+  </div>
+
+  <div id="bottomBar">
+    <button id="hangarRight">▶</button>
+    <div>
+      <div id="jetCarName">—</div>
+      <div id="jetCarIdx" style="text-align:center">1 / 24</div>
+    </div>
+    <button id="hangarLeft">◀</button>
+  </div>
+  <div id="dragHint">درگ = چرخش دور جت · اسکرول = زوم</div>
+</div>
+
+<!-- ================= پایان مأموریت ================= -->
+<div class="overlay" id="results">
+  <div class="panel">
+    <div id="resTitle">VICTORY</div>
+    <div class="reason" id="resReason">—</div>
+    <div id="resStats">
+      <div class="cell"><b id="rsScore">0</b><span>امتیاز</span></div>
+      <div class="cell"><b id="rsKills">0</b><span>سرنگونی</span></div>
+      <div class="cell"><b id="rsWave">0</b><span>موج</span></div>
+      <div class="cell"><b id="rsBest">0</b><span>رکورد</span></div>
+    </div>
+    <button class="btn primary" id="btnAgain">✈ پرواز دوباره</button>
+    <button class="btn" id="btnHangar">🏗 بازگشت به آشیانه</button>
+  </div>
+</div>
+
+<!-- ================= توقف ================= -->
+<div class="overlay" id="pauseUI">
+  <div class="panel">
+    <div class="ptitle">توقف پرواز</div>
+    <button class="btn primary" id="btnResume">ادامه پرواز</button>
+    <button class="btn" id="btnRestart">شروع دوباره مأموریت</button>
+    <button class="btn" id="btnToHangar">بازگشت به آشیانه</button>
+    <div class="hint">Esc برای ادامه</div>
   </div>
 </div>
 

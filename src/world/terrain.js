@@ -43,10 +43,12 @@ export class Terrain {
     // جزئیات
     h += fbm(this.noise, nx * 6 + 40, nz * 6 + 11, 2) * 4;
     h += 30;
-    // کوه‌های حاشیه برای بستن افق
+    // کوه‌های حاشیه تیز و صخره‌ای برای بستن افق (ریج‌د — خط‌الرأس تیز)
     const edge = Math.max(Math.abs(x), Math.abs(z)) / this.half;
-    const wall = smoothstep(0.72, 1.0, edge);
-    h += wall * wall * (160 + fbm(this.noise, nx * 2 + 99, nz * 2 + 7, 4) * 130);
+    const wall = smoothstep(0.68, 1.0, edge);
+    const ridge = 1 - Math.abs(fbm(this.noise, nx * 2 + 99, nz * 2 + 7, 4));
+    const ridge2 = 1 - Math.abs(fbm(this.noise, nx * 5 + 17, nz * 5 + 41, 3));
+    h += wall * wall * (240 + ridge * ridge * 300 + ridge2 * 70);
     // هموارسازی بیس‌ها
     h = this._flatten(h, x, z, BASES.friendly.x, BASES.friendly.z, 950, BASES.friendly.elev);
     h = this._flatten(h, x, z, BASES.enemy.x, BASES.enemy.z, 950, BASES.enemy.elev);
@@ -93,23 +95,32 @@ export class Terrain {
       const mott = fbm(this.noise, x * 0.0045 + 77, z * 0.0045 + 13, 3);
       const streak = fbm(this.noise, x * 0.0012 - 5, z * 0.012 + 31, 2); // موج شن
 
-      // پالت: شن گرم → موج‌های تیره‌تر → کف نمکی → صخره شیب‌دار → قله روشن
+      // پالت غنی کویری: شن گرم اشباع → موج → کف نمکی → صخره سرخ → قله
       c.setRGB(
-        0.80 + mott * 0.07 + streak * 0.05,
-        0.68 + mott * 0.06 + streak * 0.05,
-        0.47 + mott * 0.04,
+        0.74 + mott * 0.09 + streak * 0.06,
+        0.60 + mott * 0.08 + streak * 0.05,
+        0.40 + mott * 0.05,
       );
-      if (h < 34) c.lerp(_cSalt, clamp((34 - h) / 16, 0, 1) * 0.75);
-      if (h > 95) c.lerp(_cHigh, clamp((h - 95) / 60, 0, 1) * 0.7);
-      c.lerp(_cRock, slope * 0.9);
-      if (h > 150) c.lerp(_cPeak, clamp((h - 150) / 120, 0, 1) * 0.8);
+      if (h < 34) c.lerp(_cSalt, clamp((34 - h) / 16, 0, 1) * 0.8);
+      if (h > 95) c.lerp(_cHigh, clamp((h - 95) / 60, 0, 1) * 0.72);
+      c.lerp(_cRock, slope * 0.92);
+      if (h > 150) c.lerp(_cPeak, clamp((h - 150) / 120, 0, 1) * 0.85);
       c.convertSRGBToLinear();
       colors[k * 3] = c.r; colors[k * 3 + 1] = c.g; colors[k * 3 + 2] = c.b;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geo.computeVertexNormals();
 
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 });
+    // بافت جزئیات شن (دانه + لکه) — نزدیک دوربین بافت زمین را «زمین» می‌کند
+    const detail = _detailTexture();
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      map: detail,
+      bumpMap: detail,
+      bumpScale: 0.55,
+      roughness: 0.97,
+      metalness: 0,
+    });
     this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.receiveShadow = true;
     scene.add(this.mesh);
@@ -260,10 +271,41 @@ export class Terrain {
   }
 }
 
-const _cSalt = new THREE.Color(0.58, 0.52, 0.40);
-const _cRock = new THREE.Color(0.50, 0.43, 0.38);
-const _cHigh = new THREE.Color(0.64, 0.56, 0.47);
-const _cPeak = new THREE.Color(0.72, 0.70, 0.68);
+const _cSalt = new THREE.Color(0.70, 0.66, 0.58);
+const _cRock = new THREE.Color(0.42, 0.33, 0.27);
+const _cHigh = new THREE.Color(0.55, 0.45, 0.36);
+const _cPeak = new THREE.Color(0.80, 0.78, 0.76);
+
+// بافت جزئیات — دانه‌های شن + لکه‌های محو (نزدیک‌کلیف ۱۰۰× تکرار)
+function _detailTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 256;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#c9c2b4';
+  g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 2600; i++) {
+    const v = 175 + (Math.random() * 70) | 0;
+    g.fillStyle = `rgba(${v},${v - 6},${v - 18},${0.12 + Math.random() * 0.2})`;
+    const s = 1 + Math.random() * 2.4;
+    g.fillRect(Math.random() * 256, Math.random() * 256, s, s);
+  }
+  // لکه‌های بزرگ محو (تنوع پوشش)
+  for (let i = 0; i < 26; i++) {
+    const x = Math.random() * 256, y = Math.random() * 256, r = 14 + Math.random() * 44;
+    const dark = Math.random() < 0.5;
+    const gr = g.createRadialGradient(x, y, 1, x, y, r);
+    gr.addColorStop(0, dark ? 'rgba(96,84,64,0.16)' : 'rgba(224,214,192,0.14)');
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(110, 110);
+  tex.anisotropy = 8;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 
 function _runwayTexture() {
   const cv = document.createElement('canvas');
