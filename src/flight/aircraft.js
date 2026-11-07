@@ -95,7 +95,7 @@ export class Aircraft {
     const st = this.st;
     st.pos.set(x, this.terrain.getHeight(x, z) + alt, z);
     st.quat.setFromAxisAngle(_UP, headingDeg * DEG);
-    st.vel.set(0, 0, 1).applyQuaternion(st.quat).multiplyScalar(220);
+    st.vel.set(0, 0, 1).applyQuaternion(st.quat).multiplyScalar(250); // سرعت اولیه بیشتر — جت‌های سنگین نمی‌نشینند
     this._resetState();
     st.gear = false;
     st.throttle = 0.75;
