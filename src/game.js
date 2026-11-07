@@ -536,6 +536,7 @@ export class Game {
       this._fpActive = fp;
       p.setExteriorVisible(!fp);
       p.setFirstPerson(fp);
+      this.hud.setCompactMode(fp); // در کابین، نوارهای DOM مخفی — HUD روی شیشه است
     }
     const look = this.controls.look;
     if (performance.now() - this.controls.lastMove > CAM.lookRecenter * 1000) {
@@ -552,6 +553,10 @@ export class Game {
     if (this.camMode === 0) {
       const head = this.player.cockpitHead || new THREE.Vector3(0, 0.85, 4.4);
       _off.copy(head).applyQuaternion(st.quat).add(st.pos);
+      // حرکت سر خلبان: G (فرورفتن در صندلی) + لرزش موتور/افتربرنر/پس‌زنی توپ
+      if (p.cockpit && p.cockpit.camOffset) {
+        _off.add(_tmp.copy(p.cockpit.camOffset).applyQuaternion(st.quat));
+      }
       this.camera.position.copy(_off);
       _eul.set(look.pitch, look.yaw, 0, 'YXZ');
       _q.setFromEuler(_eul);

@@ -38,6 +38,15 @@ export class HUD {
   setCamLabel(t) { this.el.camLabel.textContent = t; }
   setBadge(t) { this.el.fpsBadge.textContent = t; }
   setF3(t) { if (this.f3on) this.el.f3.textContent = t; }
+  // در نمای کابین، ابزارهای DOM مخفی می‌شوند — HUD واقعی روی شیشه رسم می‌شود
+  setCompactMode(on) {
+    if (this._compact === on) return;
+    this._compact = on;
+    for (const k of ['spd', 'alt', 'hdg', 'gload', 'thr', 'wpn']) {
+      if (this.el[k]) this.el[k].style.display = on ? 'none' : 'block';
+    }
+    if (on) { this.el.velMarker.style.display = 'none'; this.el.pipper.style.display = 'none'; }
+  }
   flashDamage() { this.el.dmg.style.opacity = 0.55; }
   hitMarker() { this._hitT = 0.18; }
   banner(t, ms = 3000) {
@@ -74,7 +83,8 @@ export class HUD {
 
     // ---- نشانگر بردار سرعت (هر فریم) ----
     const vm = E.velMarker;
-    if (st.V > 30 && st.alive) {
+    if (this._compact) vm.style.display = 'none';
+    else if (st.V > 30 && st.alive) {
       this._v.copy(st.pos).addScaledVector(st.vel, 3).project(game.camera);
       if (this._v.z < 1 && Math.abs(this._v.x) < 1.15 && Math.abs(this._v.y) < 1.15) {
         vm.style.display = 'block';
@@ -233,6 +243,7 @@ export class HUD {
   _updatePipper(game, target) {
     const E = this.el;
     const p = game.player;
+    if (this._compact) { E.pipper.style.display = 'none'; return; }
     const show = p.lockTarget === target && p.lockT >= 0.4 && p.gunAmmo > 0
       && target.st.pos.distanceTo(p.st.pos) < 2600 && target.st.vel.lengthSq() > 100;
     if (!show) { E.pipper.style.display = 'none'; return; }
