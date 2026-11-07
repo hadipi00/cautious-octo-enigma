@@ -179,20 +179,20 @@ export function buildCockpit(spec) {
     rail.position.set(sx * 0.53 * s, 0.235 * s, 0.10 * s);
     g.add(rail);
   }
-  // کمان جلو (بالای شیشه جلو) و کمان عقب
-  const archF = new THREE.Mesh(new THREE.TorusGeometry(0.545 * s, 0.026 * s, 6, 14, Math.PI), frameMat);
-  archF.rotation.y = Math.PI / 2;
+  // کمان جلو (بالای شیشه جلو) و کمان عقب — نیم‌حلقه در صفحه XY (عرض کابین)
+  // نکته: بدون چرخش Y — چرخش π/2 حلقه را طولی می‌کرد و از وسط سر خلبان می‌گذشت!
+  const archF = new THREE.Mesh(new THREE.TorusGeometry(0.545 * s, 0.020 * s, 6, 16, Math.PI), frameMat);
   archF.position.set(0, 0.24 * s, 0.82 * s);
   g.add(archF);
-  const archR = new THREE.Mesh(new THREE.TorusGeometry(0.545 * s, 0.024 * s, 6, 14, Math.PI), frameMat);
-  archR.rotation.y = Math.PI / 2;
+  const archR = new THREE.Mesh(new THREE.TorusGeometry(0.545 * s, 0.018 * s, 6, 16, Math.PI), frameMat);
   archR.position.set(0, 0.24 * s, -0.62 * s);
   g.add(archR);
 
   // ---------- شیشه‌های جانبی + سقف شیشه‌ای (از داخل کمی دیده می‌شوند) ----------
   const sideGlassMat = new THREE.MeshPhysicalMaterial({
-    color: 0x2a4a60, transparent: true, opacity: 0.14, roughness: 0.06,
+    color: 0x24404f, transparent: true, opacity: 0.12, roughness: 0.08,
     metalness: 0.1, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false,
+    envMapIntensity: 0.35, // بازتاب کم — وگرنه شیشه مثل آینه سفید دیده می‌شود
   });
   for (const sx of [-1, 1]) {
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.3 * s, 0.42 * s), sideGlassMat);

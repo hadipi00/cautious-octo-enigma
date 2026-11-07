@@ -41,7 +41,7 @@ export class Game {
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.06;
+    this.renderer.toneMappingExposure = 1.12;
     this.renderer.shadowMap.enabled = q.shadows;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -169,8 +169,11 @@ export class Game {
     this.groundDefense.enabled = (type === 'strike');
 
     if (type === 'free') {
-      this.player.spawnAir(1400, 90, -2000, 0);
-      this.hud.banner('پرواز آزاد — باند فرود در شرق نقشه است');
+      // شروع واقعی وارتاندر: روی باند فرودگاه متفقین — برخاست با گاز کامل
+      this.player.spawnRunway();
+      this.controls.gear = true;
+      this.controls.flapStage = 1;
+      this.hud.banner('روی باند ۲۷ — گاز را کامل کن (W یا اسکرول)، در ~۲۲۰km/h موس را عقب بکش تا بلند شوی', 9000);
     } else if (type === 'strike') {
       this.player.spawnAir(1200, 90, -2800, 800);
       this._strikeLeft = this.props.targets.filter(t => t.alive).length;
@@ -201,6 +204,18 @@ export class Game {
     this.controls.lockOnClick = true;
     if (!this.debug && !this._autotest) this.controls.requestLock();
     this.audio.resume();
+    // دوربین تعقیبی همان اول پشت هواپیما — نه با فاصله کیلومتری از جای قبلی
+    this._snapChaseCamera();
+  }
+
+  // دوربین تعقیبی را فوراً پشت موقعیت فعلی بازیکن می‌گذارد (بدون لگ بزرگ)
+  _snapChaseCamera() {
+    const st = this.player.st;
+    const o = this.camMode === 2 ? CAM.farOffset : CAM.chaseOffset;
+    _off.set(0, o.up, -o.back).applyQuaternion(st.quat).add(st.pos);
+    this.camPos.copy(_off);
+    _aim.copy(st.pos).addScaledVector(_tmp.set(0, 0, 1).applyQuaternion(st.quat), 45);
+    this.camAim.copy(_aim);
   }
 
   _makeEnemy(specId, pos, headingDeg, skill) {
@@ -545,6 +560,8 @@ export class Game {
     } else {
       const o = this.camMode === 2 ? CAM.farOffset : CAM.chaseOffset;
       _off.set(0, o.up, -o.back).applyQuaternion(st.quat).add(st.pos);
+      // اگر دوربین خیلی عقب افتاد (فریم‌کندی/تلپورت) فوراً بپر — نه خزش کیلومتری
+      if (this.camPos.distanceTo(_off) > 80) this.camPos.copy(_off);
       if (look.yaw !== 0) _off.sub(st.pos).applyAxisAngle(_WORLD_UP, -look.yaw).add(st.pos);
       if (look.pitch !== 0) {
         _axis.set(1, 0, 0).applyQuaternion(st.quat);

@@ -16,12 +16,12 @@ export const BASES = {
 export const QUALITY = {
   low: {
     label: 'کم',    pixelCap: 1.0,  antialias: false, shadows: false, shadowSize: 512,
-    fogNear: 1500,  fogFar: 9500,   terrainSeg: 256,  clouds: 10,  rocks: 60,   trees: 0,
+    fogNear: 3000,  fogFar: 16000,  terrainSeg: 256,  clouds: 10,  rocks: 60,   trees: 0,
     maxParticles: 250, autoRes: true,
   },
   medium: {
     label: 'متوسط', pixelCap: 1.25, antialias: true,  shadows: true,  shadowSize: 1024,
-    fogNear: 2500,  fogFar: 15000,  terrainSeg: 340,  clouds: 18,  rocks: 120,  trees: 140,
+    fogNear: 3800,  fogFar: 18000,  terrainSeg: 340,  clouds: 18,  rocks: 120,  trees: 140,
     maxParticles: 500, autoRes: true,
   },
   high: {
@@ -40,7 +40,7 @@ export const CAM = {
   chaseOffset:   { back: 17, up: 4.6 },
   farOffset:     { back: 34, up: 9 },
   cockpitFov: 76, chaseFov: 70,
-  smooth: 6.5, lookRecenter: 1.6, lookSens: 0.0021,
+  smooth: 16, lookRecenter: 1.6, lookSens: 0.0021, // چسبنده مثل وارتاندر — لگ ندارد
 };
 
 export const SIM = {

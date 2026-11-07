@@ -117,7 +117,7 @@ export function buildSky(scene, quality, renderer) {
   scene.add(sun.target);
 
   // نور آسمان (محیطی دوقطبی) — با env-map جمع می‌شود و عمق رنگ می‌دهد
-  const hemi = new THREE.HemisphereLight(0xbcd2ff, 0x8f7d5e, 0.35);
+  const hemi = new THREE.HemisphereLight(0xbcd2ff, 0x8f7d5e, 0.55);
   scene.add(hemi);
 
   // ---------- لنز فلر سینمایی ----------
@@ -135,12 +135,15 @@ export function buildSky(scene, quality, renderer) {
     return sp;
   };
   const flares = [
-    { sp: mkSprite(flareTex, 5200, 0xffe9c4, 0.55), base: 0.55, k: 0.0, streak: false },
-    { sp: mkSprite(streakTex, 3600, 0xffdfb0, 0.30), base: 0.30, k: 0.0, streak: true }, // خط آنامورفیک
-    { sp: mkSprite(flareTex, 1500, 0xaed4ff, 0.20), base: 0.20, k: -0.4, streak: false },
-    { sp: mkSprite(flareTex, 900, 0xffd2a0, 0.16), base: 0.16, k: -0.7, streak: false },
-    { sp: mkSprite(flareTex, 600, 0x9fe8c0, 0.13), base: 0.13, k: -1.05, streak: false },
-    { sp: mkSprite(flareTex, 800, 0xd0b4ff, 0.12), base: 0.12, k: -1.5, streak: false },
+    // k=-1 یعنی دقیقاً روی موقعیت خورشید؛ بقیه ارواح کوچک بین مرکز و خورشید
+    // اندازه‌ها در فاصله ۹۰۰۰ متری — باید زیر ~۵ درجه بمانند
+    // (قبلاً ۵۲۰۰ بود = دیسک ۳۳ درجه‌ای که کل صفحه را سفید می‌کرد!)
+    { sp: mkSprite(flareTex, 640, 0xffe9c4, 0.50), base: 0.50, k: -1.0, streak: false },
+    { sp: mkSprite(streakTex, 460, 0xffdfb0, 0.28), base: 0.28, k: -1.0, streak: true }, // خط آنامورفیک
+    { sp: mkSprite(flareTex, 340, 0xaed4ff, 0.18), base: 0.18, k: -0.4, streak: false },
+    { sp: mkSprite(flareTex, 240, 0xffd2a0, 0.15), base: 0.15, k: -0.7, streak: false },
+    { sp: mkSprite(flareTex, 170, 0x9fe8c0, 0.12), base: 0.12, k: -1.35, streak: false },
+    { sp: mkSprite(flareTex, 210, 0xd0b4ff, 0.11), base: 0.11, k: -1.8, streak: false },
   ];
 
   return {
@@ -158,8 +161,13 @@ export function buildSky(scene, quality, renderer) {
         _sv.copy(camPos).addScaledVector(SUN_DIR, 9000).project(camera);
         const edgeFade = Math.min(1, (facing - 0.25) * 4) * (_sv.z < 1 ? 1 : 0);
         for (const f of flares) {
-          _gv.set(-_sv.x * f.k, -_sv.y * f.k, 0.5).unproject(camera);
-          f.sp.position.copy(_gv);
+          // هشدار: unproject با NDC z=0.5 نقطه‌ای ~۲ متری از دوربین می‌دهد
+          // (z در NDC غیرخطی است!) — باید جهت را نرمال کنیم و روی پرتو
+          // آینه‌شده در فاصله واقعی ۹ کیلومتری بگذاریم، وگرنه اسپرایت غول‌آسا
+          // کل صفحه را شیری سفید می‌کند.
+          _gv.set(-_sv.x * f.k, -_sv.y * f.k, 0.5).unproject(camera).sub(camPos).normalize();
+          if (_gv.dot(_fv) < 0.1) { f.sp.visible = false; continue; } // پشت سر
+          f.sp.position.copy(camPos).addScaledVector(_gv, 9000);
           f.sp.material.opacity = f.base * edgeFade;
           f.sp.visible = true;
         }

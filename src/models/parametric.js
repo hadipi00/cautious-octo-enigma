@@ -31,7 +31,7 @@ export function buildJet(v = {}, len = 15, span = 10, nation = 'USA') {
     roughness: 0.36,
     clearcoat: 0.55,
     clearcoatRoughness: 0.30,
-    envMapIntensity: 1.25,
+    envMapIntensity: 1.55,
   });
   const wingMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
@@ -40,7 +40,7 @@ export function buildJet(v = {}, len = 15, span = 10, nation = 'USA') {
     roughness: 0.38,
     clearcoat: 0.5,
     clearcoatRoughness: 0.32,
-    envMapIntensity: 1.2,
+    envMapIntensity: 1.5,
   });
   const darkMat = new THREE.MeshPhysicalMaterial({
     color: '#33383e', roughness: 0.5, metalness: 0.6, envMapIntensity: 0.9,
@@ -271,10 +271,10 @@ export function buildJet(v = {}, len = 15, span = 10, nation = 'USA') {
   canopy.renderOrder = 5;
   g.add(canopy);
 
-  // قاب کانوپی — دو کمان فلزی + لبه جلو
+  // قاب کانوپی — دو کمان فلزی + لبه جلو (نیم‌حلقه عرضی؛ بدون چرخش Y تا حلقه
+  // طولی از وسط کانوپی عبور نکند)
   const frameMat = new THREE.MeshPhysicalMaterial({ color: '#6d747b', roughness: 0.4, metalness: 0.75, envMapIntensity: 1.1 });
   const archF = new THREE.Mesh(new THREE.TorusGeometry(0.49 * s, 0.028 * s, 6, 14, Math.PI), frameMat);
-  archF.rotation.y = Math.PI / 2;
   archF.position.set(0, 0.47 * s, 4.05 * s);
   g.add(archF);
   const archR = archF.clone();
