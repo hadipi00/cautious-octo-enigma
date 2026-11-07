@@ -23,6 +23,7 @@ const _off = new THREE.Vector3(), _aim = new THREE.Vector3(), _axis = new THREE.
 const _WORLD_UP = new THREE.Vector3(0, 1, 0);
 const _eul = new THREE.Euler(), _q = new THREE.Quaternion();
 const _tmp = new THREE.Vector3();
+const _FLIP = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI); // دوربین سه‌جی به -Z نگاه می‌کند؛ دماغه +Z است
 
 export class Game {
   constructor(canvas, specs, opts = {}) {
@@ -327,8 +328,8 @@ export class Game {
   }
 
   _updateFlying(dt) {
-    // ورودی بازیکن
-    const input = this.controls.getIntent(dt);
+    // ورودی بازیکن — موس = اهرم (اینستراکتور مجازی)، Ctrl = سر خلبان
+    const input = this.controls.getIntent(dt, this.player, this.camera);
     for (const code of this.controls.drainQueue()) this._action(code);
     const p = this.player;
     p.input.pitch = input.pitch;
@@ -364,7 +365,7 @@ export class Game {
     this.groundDefense.update(dt, this.aircraft);
     this.effects.update(dt);
     this.clouds.update(this.camera.position);
-    this.sky.update(p.st.pos);
+    this.sky.update(p.st.pos, this.camera);
 
     // لاشه‌های در حال سوختن روی زمین
     this._wreckT -= dt;
@@ -386,6 +387,7 @@ export class Game {
     this.audio.updateEngine(p.st);
     this._updateRwr(dt);
     this.hud.update(dt, this);
+    this.controls.updateUI(this);   // نشانگر اهرم + استیک مجازی
 
     // موج بعدی / پایان مأموریت‌ها
     const redAlive = this.aircraft.filter(a => a.team === 'red' && a.alive).length;
@@ -486,21 +488,21 @@ export class Game {
       look.yaw = damp(look.yaw, 0, 4, dt);
       look.pitch = damp(look.pitch, 0, 4, dt);
     }
-    const targetFov = this.camMode === 0 ? CAM.cockpitFov : CAM.chaseFov;
-    // چرخش سر با دکمه‌ها (I/J/K/L) — وسط کردن با Home
+    // چرخش سر با دکمه‌ها (I/J/K/L) — وسط کردن با Home (استیک + سر)
     const K = this.controls.keys;
     if (K.has('KeyJ')) { look.yaw += 2.0 * dt; this.controls.lastMove = performance.now(); }
     if (K.has('KeyL')) { look.yaw -= 2.0 * dt; this.controls.lastMove = performance.now(); }
     if (K.has('KeyI')) { look.pitch += 1.6 * dt; this.controls.lastMove = performance.now(); }
     if (K.has('KeyK')) { look.pitch -= 1.6 * dt; this.controls.lastMove = performance.now(); }
-    if (K.has('Home')) { look.yaw = 0; look.pitch = 0; }
+    if (K.has('Home')) this.controls.recenter();
     if (this.camMode === 0) {
       const head = this.player.cockpitHead || new THREE.Vector3(0, 0.85, 4.4);
       _off.copy(head).applyQuaternion(st.quat).add(st.pos);
       this.camera.position.copy(_off);
       _eul.set(look.pitch, look.yaw, 0, 'YXZ');
       _q.setFromEuler(_eul);
-      this.camera.quaternion.copy(st.quat).multiply(_q);
+      // فلیپ π: دوربین رو به دماغه (قبلاً رو به دم بود!) + نگاه سر خلبان
+      this.camera.quaternion.copy(st.quat).multiply(_FLIP).multiply(_q);
     } else {
       const o = this.camMode === 2 ? CAM.farOffset : CAM.chaseOffset;
       _off.set(0, o.up, -o.back).applyQuaternion(st.quat).add(st.pos);
@@ -527,8 +529,13 @@ export class Game {
     if (shake > 0.001) {
       this.camera.position.add(_tmp.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(shake));
     }
+    // حس سرعت — FOV با سرعت/افتربرنر کمی باز می‌شود (روانی و هیجان)
+    const baseFov = this.camMode === 0 ? CAM.cockpitFov : CAM.chaseFov;
+    const targetFov = baseFov
+      + clamp((st.V - 260) / 780, 0, 1) * 9
+      + (st.afterburner ? 2.5 : 0);
     if (Math.abs(this.camera.fov - targetFov) > 0.1) {
-      this.camera.fov = damp(this.camera.fov, targetFov, 6, dt);
+      this.camera.fov = damp(this.camera.fov, targetFov, 4.5, dt);
       this.camera.updateProjectionMatrix();
     }
   }
@@ -538,7 +545,7 @@ export class Game {
     const B = BASES.friendly;
     this.camera.position.set(B.x + Math.cos(this._menuT) * 2600, 560, B.z + Math.sin(this._menuT) * 2600);
     this.camera.lookAt(B.x, 60, B.z);
-    this.sky.update(this.camera.position);
+    this.sky.update(this.camera.position, this.camera);
     this.clouds.update(this.camera.position);
     if (this.camera.fov !== 62) { this.camera.fov = 62; this.camera.updateProjectionMatrix(); }
   }

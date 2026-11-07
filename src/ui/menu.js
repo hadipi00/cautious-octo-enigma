@@ -30,6 +30,7 @@ export class Menu {
     const render = () => {
       const spec = g.specs[this.ids[this.selIdx]];
       const s = spec.stats || {};
+      const msl0 = (spec.missiles && spec.missiles[0]) ? spec.missiles[0].count : 0;
       const bar = (v) => {
         let out = '';
         for (let i = 0; i < 10; i++) out += i < Math.round(v * 10) ? '▰' : '▱';
@@ -42,7 +43,7 @@ export class Menu {
         <div class="statRow"><span>چابکی</span><b>${bar(s.agility || 0.8)}</b></div>
         <div class="statRow"><span>آتش</span><b>${bar(s.firepower || 0.7)}</b></div>
         <div class="statRow"><span>بدنه</span><b>${bar(s.armor || 0.8)}</b></div>
-        <div class="planeArm">توپ ${spec.guns[0].ammo} · موشک ${spec.missiles[0].count} · بمب ${spec.bombs || 0} · فلر ${spec.flares}</div>`;
+        <div class="planeArm">توپ ${spec.guns[0].ammo} · موشک ${msl0} · بمب ${spec.bombs || 0} · فلر ${spec.flares}</div>`;
       car.textContent = `◀  ${this.selIdx + 1} / ${this.ids.length}  ▶`;
       car.dataset.id = spec.id;
     };

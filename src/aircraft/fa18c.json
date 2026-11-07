@@ -1,0 +1,77 @@
+{
+  "id": "fa18c",
+  "name": "F/A-18C Hornet",
+  "nation": "USA",
+  "role": "multirole",
+  "mass": 12500,
+  "fuelCap": 4900,
+  "thrustMil": 97800,
+  "thrustAB": 157400,
+  "burnMil": 1.5,
+  "burnAB": 6.8,
+  "wingArea": 37.2,
+  "wingSpan": 11.43,
+  "len": 17.07,
+  "CL0": 0.04,
+  "CLa": 4.8,
+  "aStall": 18,
+  "CD0": 0.024,
+  "kInd": 0.11,
+  "maxG": 7.5,
+  "rollRate": 240,
+  "pitchRate": 20,
+  "yawRate": 10,
+  "gearH": 2.3,
+  "bellyH": 1.15,
+  "guns": [
+    {
+      "name": "M61A1",
+      "ammo": 578,
+      "cal": 20
+    }
+  ],
+  "missiles": [
+    {
+      "name": "AIM-120C",
+      "type": "arh",
+      "count": 2,
+      "range": 18000
+    },
+    {
+      "name": "AIM-9L",
+      "type": "ir",
+      "count": 2,
+      "range": 8000
+    }
+  ],
+  "bombs": 3,
+  "rockets": 19,
+  "flares": 60,
+  "chaff": 60,
+  "stats": {
+    "speed": 0.72,
+    "agility": 0.82,
+    "firepower": 0.78,
+    "armor": 0.85
+  },
+  "visual": {
+    "wingType": "swept",
+    "tailType": "twin",
+    "engines": 2,
+    "body": "#6f7a86",
+    "accent": "#3d4a5c",
+    "fusW": 1.05
+  },
+  "cockpit": {
+    "style": "west",
+    "panel": "#2b3138",
+    "sideStick": false,
+    "mfds": 2
+  },
+  "hp": 95,
+  "radar": {
+    "range": 95000,
+    "gimbal": 60
+  },
+  "rcs": 5
+}

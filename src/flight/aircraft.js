@@ -36,7 +36,7 @@ export class Aircraft {
     // کابین سه‌بعدی — همه جنگنده‌ها دارند
     const cs = spec.len / 15;
     this.cockpit = buildCockpit(spec);
-    this.cockpitHead = new THREE.Vector3(0, 0.30 * cs, 1.95 * cs);
+    this.cockpitHead = new THREE.Vector3(0, 0.42 * cs, 1.45 * cs);
     this.group.add(this.cockpit.group);
 
     this.st = {
@@ -71,6 +71,8 @@ export class Aircraft {
     this.distToPlayer = 9999;
     this.contrailT = 0;
     this.smokeT = 0;
+    // مقادیر نمایشی هموارشده برای انیمیشن سکان‌ها
+    this._disp = { pitch: 0, roll: 0, yaw: 0, brake: 0, gear: 1, sweep: 0 };
 
     this.input = {
       pitch: 0, roll: 0, yaw: 0, throttle: 0,
@@ -174,18 +176,19 @@ export class Aircraft {
     // ظاهر
     this.group.position.copy(st.pos);
     this.group.quaternion.copy(st.quat);
-    this.refs.gearGroup.visible = st.gear;
     for (const m of this.refs.abGlows) m.visible = st.afterburner;
+    this._animateVisuals(dt);
 
-    // دنباله G بالا / سوپرسونیک / زاویه حمله بالا (گردباد)
+    // دنباله G بالا / سوپرسونیک / ارتفاع بالا (گردباد و کانتریل)
     this.contrailT -= dt;
-    if (this.contrailT <= 0 && (Math.abs(st.gForce) > 4.5 || st.mach > 0.92 || Math.abs(st.alpha) > 0.21) && !st.onGround) {
-      this.contrailT = 0.05;
+    const highAlt = st.pos.y > 7800;
+    if (this.contrailT <= 0 && ((Math.abs(st.gForce) > 4.5 || st.mach > 0.92 || Math.abs(st.alpha) > 0.21 || highAlt) && !st.onGround)) {
+      this.contrailT = highAlt ? 0.09 : 0.05;
       if (this.effects) {
         _right.set(1, 0, 0).applyQuaternion(st.quat).multiplyScalar(this.spec.wingSpan * 0.45);
         for (const s of [1, -1]) {
           _tmp.copy(st.pos).addScaledVector(_right, s).addScaledVector(_fwd.set(0, 0, 1).applyQuaternion(st.quat), -2);
-          this.effects.puff(_tmp, _tmp.set(0, 0, 0), 2.2, 0.9, 0xffffff, 0.35);
+          this.effects.puff(_tmp, _tmp.set(0, 0, 0), highAlt ? 3.2 : 2.2, highAlt ? 2.4 : 0.9, 0xffffff, highAlt ? 0.22 : 0.35);
         }
       }
     }
@@ -229,6 +232,43 @@ export class Aircraft {
       }
     }
     if (this.cockpit) this.cockpit.update(dt, this, this.game);
+  }
+
+  // ---------- انیمیشن سکان‌ها، بال متغیر، چرخ فرود، ترمز ----------
+  _animateVisuals(dt) {
+    const d = this._disp, inp = this.input, st = this.st, R = this.refs;
+    const k = 1 - Math.exp(-dt * 9); // هموارسازی سریع اما نرم
+    d.pitch += (clamp(inp.pitch, -1, 1) - d.pitch) * k;
+    d.roll += (clamp(inp.roll, -1, 1) - d.roll) * k;
+    d.yaw += (clamp(inp.yaw, -1, 1) - d.yaw) * k;
+    d.brake += ((st.brake ? 1 : 0) - d.brake) * (1 - Math.exp(-dt * 6));
+
+    // اورلات — دماغه بالا = لبه فرود سکان بالا
+    for (const p of R.elevPivots) p.rotation.x = d.pitch * 0.5;
+    // ایلرون — خلاف هم (غلت راست = راست بالا، چپ پایین)
+    for (const a of R.ailPivots) a.pivot.rotation.x = a.sideX * d.roll * 0.45;
+    // ردر
+    for (const p of R.rudderPivots) p.rotation.y = d.yaw * 0.28;
+    // کانارد — خلاف اورلات (کوبیده به سمت برآ)
+    for (const p of R.canardPivots) p.rotation.x = -d.pitch * 0.5;
+    // فلپ
+    for (const p of R.flapPivots) p.rotation.x = -st.flaps * 0.55;
+    // ترمز هوایی — پنل پشتی بلند می‌شود
+    if (R.brakePivot) R.brakePivot.rotation.x = 0.02 + d.brake * 0.95;
+
+    // چرخ فرود — تاشو نرم (۱.۲ ثانیه)
+    const gearTarget = st.gear ? 1 : 0;
+    d.gear += (gearTarget - d.gear) * (1 - Math.exp(-dt * 1.8));
+    for (const p of R.gearPivots) p.rotation.x = (1 - d.gear) * 1.5;
+
+    // بال متغیر — خودکار با سرعت (جاروب در سرعت بالا)
+    if (R.isVariable && R.sweepPivots.length) {
+      let target = st.gear ? 0 : clamp((st.mach - 0.5) / 0.55, 0, 1);
+      if (st.flaps > 0) target = Math.min(target, 0.12);
+      d.sweep += (target - d.sweep) * (1 - Math.exp(-dt * 0.9));
+      const ang = 0.24 + 0.86 * d.sweep;
+      for (const sp of R.sweepPivots) sp.pivot.rotation.y = sp.sideX * ang;
+    }
   }
 
   _ground(dt, inp) {

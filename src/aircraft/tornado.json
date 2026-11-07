@@ -1,0 +1,71 @@
+{
+  "id": "tornado",
+  "name": "Tornado IDS",
+  "nation": "EUROPE",
+  "role": "strike",
+  "mass": 14000,
+  "fuelCap": 5800,
+  "thrustMil": 77400,
+  "thrustAB": 142400,
+  "burnMil": 1.9,
+  "burnAB": 8.5,
+  "wingArea": 34.0,
+  "wingSpan": 13.91,
+  "len": 16.72,
+  "CL0": 0.04,
+  "CLa": 4.4,
+  "aStall": 16,
+  "CD0": 0.03,
+  "kInd": 0.12,
+  "maxG": 7.5,
+  "rollRate": 180,
+  "pitchRate": 13,
+  "yawRate": 7,
+  "gearH": 2.4,
+  "bellyH": 1.2,
+  "guns": [
+    {
+      "name": "2×Mauser BK-27",
+      "ammo": 360,
+      "cal": 27
+    }
+  ],
+  "missiles": [
+    {
+      "name": "AIM-9L",
+      "type": "ir",
+      "count": 2,
+      "range": 8000
+    }
+  ],
+  "bombs": 4,
+  "rockets": 38,
+  "flares": 60,
+  "chaff": 60,
+  "stats": {
+    "speed": 0.75,
+    "agility": 0.5,
+    "firepower": 0.78,
+    "armor": 0.88
+  },
+  "visual": {
+    "wingType": "variable",
+    "tailType": "single",
+    "engines": 2,
+    "body": "#6f7a68",
+    "accent": "#4d5545",
+    "fusW": 1.1
+  },
+  "cockpit": {
+    "style": "west",
+    "panel": "#2b3138",
+    "sideStick": false,
+    "mfds": 2
+  },
+  "hp": 100,
+  "radar": {
+    "range": 55000,
+    "gimbal": 50
+  },
+  "rcs": 6
+}

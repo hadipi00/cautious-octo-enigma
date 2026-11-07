@@ -1,6 +1,10 @@
 // آسمان سینمایی + خورشید + نور — و لایه ابر
 import * as THREE from 'three';
 
+const _fv = new THREE.Vector3();
+const _sv = new THREE.Vector3();
+const _gv = new THREE.Vector3();
+
 export function buildSky(scene, quality) {
   const sunDir = new THREE.Vector3(-0.45, 0.55, 0.40).normalize();
 
@@ -28,10 +32,12 @@ export function buildSky(scene, quality) {
         col += vec3(1.0, 0.87, 0.62) * pow(s, 900.0) * 12.0;   // قرص خورشید
         col += vec3(1.0, 0.72, 0.42) * pow(s, 16.0) * 0.35;    // هاله
         col += vec3(0.92, 0.62, 0.36) * pow(max(1.0 - h, 0.0), 7.0) * 0.22;
-        // ابرهای آسمان دوردست (نویز ارزان)
-        float band = smoothstep(0.04, 0.24, d.y) * (1.0 - smoothstep(0.24, 0.55, d.y));
-        float cl = sin(d.x * 28.0 + d.z * 17.0) * sin(d.z * 23.0 - d.x * 11.0);
-        col += vec3(0.06) * band * smoothstep(0.55, 1.0, cl);
+        // ابرهای آسمان دوردست — لکه‌های نرم (بدون نوار)
+        float band = smoothstep(0.03, 0.20, d.y) * (1.0 - smoothstep(0.20, 0.50, d.y));
+        float cl = sin(d.x * 11.0 + d.z * 6.0) * sin(d.z * 15.0 - d.x * 4.0 + d.y * 7.0);
+        cl = cl * 0.5 + 0.5;
+        cl *= 0.5 + 0.5 * sin(d.x * 5.0 - d.z * 9.0 + 2.0);
+        col += vec3(0.055) * band * smoothstep(0.62, 0.94, cl);
         gl_FragColor = vec4(col, 1.0);
       }`,
   });
@@ -57,15 +63,63 @@ export function buildSky(scene, quality) {
   const hemi = new THREE.HemisphereLight(0xbdd4ff, 0x9a8a68, 0.5);
   scene.add(hemi);
 
+  // ---------- لنز فلر (اسپرایت‌های افزودنی روی خط خورشید) ----------
+  const flareTex = _flareTexture();
+  const mkFlare = (size, color, opacity = 0.5) => {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: flareTex, color, transparent: true, opacity,
+      blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, fog: false,
+    }));
+    sp.renderOrder = 90;
+    sp.visible = false;
+    scene.add(sp);
+    return sp;
+  };
+  const flares = [
+    { sp: mkFlare(4200, 0xffe8c0), base: 0.5, k: 0.0 },   // هاله اصلی روی خورشید
+    { sp: mkFlare(1300, 0xaed4ff), base: 0.22, k: -0.35 },// بازتاب‌ها روی محور مرکز↔خورشید
+    { sp: mkFlare(800, 0xffd2a0), base: 0.18, k: -0.65 },
+    { sp: mkFlare(550, 0x9fe8c0), base: 0.15, k: -1.0 },
+  ];
+
   return {
-    sky, sun, hemi, sunDir,
-    update(playerPos) {
+    sky, sun, hemi, sunDir, flares,
+    update(playerPos, camera) {
       sky.position.set(playerPos.x, 0, playerPos.z);
       sun.position.copy(playerPos).addScaledVector(sunDir, 700);
       sun.target.position.copy(playerPos);
       sun.target.updateMatrixWorld();
+      // لنز فلر — فقط وقتی خورشید جلوی دوربین است
+      _fv.set(0, 0, -1).applyQuaternion(camera.quaternion);
+      const facing = _fv.dot(sunDir);
+      if (facing > 0.3) {
+        _sv.copy(camera.position).addScaledVector(sunDir, 9000).project(camera);
+        const edgeFade = Math.min(1, (facing - 0.3) * 4) * (_sv.z < 1 ? 1 : 0);
+        for (const f of flares) {
+          _gv.set(-_sv.x * f.k, -_sv.y * f.k, 0.5).unproject(camera);
+          f.sp.position.copy(_gv);
+          f.sp.material.opacity = f.base * edgeFade;
+          f.sp.visible = true;
+        }
+      } else {
+        for (const f of flares) f.sp.visible = false;
+      }
     },
   };
+}
+
+function _flareTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const g = cv.getContext('2d');
+  const grad = g.createRadialGradient(64, 64, 2, 64, 64, 62);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.25, 'rgba(255,255,255,0.5)');
+  grad.addColorStop(0.6, 'rgba(255,255,255,0.12)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(cv);
 }
 
 // ------------------------------------------------------------

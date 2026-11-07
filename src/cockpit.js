@@ -1,6 +1,7 @@
 // ============================================================
 // کابین پارامتریک سه‌بعدی — برای همه جنگنده‌ها
-// داشبورد + MFD زنده (رادار/وضعیت) + استیک متحرک + چرخش سر
+// داشبورد در ارتفاع چشم خلبان + MFD زنده (رادار/وضعیت) + استیک متحرک
+// سر خلبان با نگاه می‌چرخد + شیشه کانوپی نیمه‌شفاف
 // سبک غربی/روسی از روی داده هر جنگنده
 // ============================================================
 import * as THREE from 'three';
@@ -24,23 +25,27 @@ export function buildCockpit(spec) {
   const mat = (c, rough = 0.85, metal = 0.1) =>
     new THREE.MeshStandardMaterial({ color: c, roughness: rough, metalness: metal });
 
-  // ---------- داشبورد و آفتاب‌گیر ----------
-  const glare = new THREE.Mesh(new THREE.BoxGeometry(0.94 * s, 0.10 * s, 0.34 * s), mat(panelCol, 0.95));
-  glare.position.set(0, 0.10 * s, 0.62 * s);
+  // ---------- کف/تُب کابین — پایین دید را پر می‌کند ----------
+  const tub = new THREE.Mesh(new THREE.BoxGeometry(0.94 * s, 0.5 * s, 1.15 * s), mat(0x14181e, 0.95, 0.05));
+  tub.position.set(0, -0.40 * s, 0.28 * s);
+  g.add(tub);
+
+  // ---------- داشبورد و آفتاب‌گیر (در ارتفاع چشم) ----------
+  const glare = new THREE.Mesh(new THREE.BoxGeometry(0.94 * s, 0.07 * s, 0.30 * s), mat(0x181c22, 0.95));
+  glare.position.set(0, 0.17 * s, 0.66 * s);
   g.add(glare);
 
-  // پنل اصلی (بافت کشیده‌شده روی بوم)
   const panelCanvas = document.createElement('canvas');
   panelCanvas.width = panelCanvas.height = 256;
   drawStaticPanel(panelCanvas.getContext('2d'), panelCol, west, glowCol);
   const panelTex = new THREE.CanvasTexture(panelCanvas);
   panelTex.colorSpace = THREE.SRGBColorSpace;
   const panel = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.92 * s, 0.40 * s),
+    new THREE.PlaneGeometry(0.92 * s, 0.34 * s),
     new THREE.MeshStandardMaterial({ map: panelTex, roughness: 0.9 })
   );
-  panel.position.set(0, -0.06 * s, 0.58 * s);
-  panel.rotation.set(-0.25, Math.PI, 0, 'YXZ'); // رو به خلبان
+  panel.position.set(0, 0.01 * s, 0.63 * s);
+  panel.rotation.set(-0.42, Math.PI, 0, 'YXZ'); // رو به خلبان
   g.add(panel);
 
   // ---------- MFDها (۲ صفحه زنده) ----------
@@ -51,97 +56,117 @@ export function buildCockpit(spec) {
     cv.width = cv.height = 256;
     const tex = new THREE.CanvasTexture(cv);
     tex.colorSpace = THREE.SRGBColorSpace;
-    const x = mfdCount === 2 ? (i === 0 ? -0.24 * s : 0.24 * s) : (i === 0 ? 0 : 0.30 * s);
+    const x = mfdCount === 2 ? (i === 0 ? 0.21 * s : -0.21 * s) : (i === 0 ? 0 : 0.30 * s); // x معکوس: صفحه با rotY(π) آینه می‌شود
     const m = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.26 * s, 0.26 * s),
+      new THREE.PlaneGeometry(0.25 * s, 0.25 * s),
       new THREE.MeshBasicMaterial({ map: tex })
     );
-    m.position.set(x, -0.03 * s, 0.565 * s);
-    m.rotation.set(-0.2, Math.PI, 0, 'YXZ'); // رو به خلبان
+    m.position.set(x, 0.02 * s, 0.60 * s);
+    m.rotation.set(-0.38, Math.PI, 0, 'YXZ'); // رو به خلبان
     g.add(m);
-    const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.30 * s, 0.30 * s, 0.02 * s), mat(accentCol));
-    bezel.position.set(x, -0.03 * s, 0.555 * s);
-    bezel.rotation.x = -0.2;
+    const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.29 * s, 0.29 * s, 0.02 * s), mat(accentCol));
+    bezel.position.set(x, 0.02 * s, 0.592 * s);
+    bezel.rotation.x = -0.38;
     g.add(bezel);
     mfds.push({ cv, ctx: cv.getContext('2d'), tex });
   }
 
   // ---------- پدستال و کنسول‌های کناری + چراغ‌های چشمک‌زن ----------
-  const pedestal = new THREE.Mesh(new THREE.BoxGeometry(0.34 * s, 0.34 * s, 0.5 * s), mat(panelCol));
-  pedestal.position.set(0, -0.34 * s, 0.30 * s);
+  const pedestal = new THREE.Mesh(new THREE.BoxGeometry(0.30 * s, 0.44 * s, 0.42 * s), mat(panelCol));
+  pedestal.position.set(0, -0.24 * s, 0.36 * s);
   g.add(pedestal);
+  const leds = [];
   for (const sx of [-1, 1]) {
-    const con = new THREE.Mesh(new THREE.BoxGeometry(0.22 * s, 0.10 * s, 0.72 * s), mat(panelCol));
-    con.position.set(sx * 0.55 * s, -0.30 * s, 0.28 * s);
+    const con = new THREE.Mesh(new THREE.BoxGeometry(0.20 * s, 0.12 * s, 0.80 * s), mat(panelCol));
+    con.position.set(sx * 0.53 * s, -0.08 * s, 0.22 * s);
     g.add(con);
     for (let i = 0; i < 6; i++) {
       const led = new THREE.Mesh(
-        new THREE.SphereGeometry(0.012 * s, 6, 4),
+        new THREE.SphereGeometry(0.011 * s, 6, 4),
         new THREE.MeshBasicMaterial({ color: i % 3 === 0 ? glowCol : 0x30404a })
       );
-      led.position.set(sx * (0.50 + Math.random() * 0.10) * s, -0.24 * s, 0.05 + i * 0.085 * s);
+      led.position.set(sx * (0.49 + Math.random() * 0.08) * s, -0.02 * s, -0.10 + i * 0.085 * s);
       g.add(led);
+      leds.push(led);
     }
   }
 
   // ---------- استیک (جانبی یا مرکزی) + گاز ----------
+  // توجه: +X قاب هواپیما = چپِ خلبان — استیک جانبی سمت راست خلبان است (−X)
   const stickGroup = new THREE.Group();
   const side = cfg.sideStick ? 1 : 0;
-  const stickX = side ? 0.42 * s : 0;
-  const stickY = side ? -0.26 * s : -0.14 * s;
-  const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.025 * s, 0.035 * s, 0.30 * s, 8), mat(0x14181d, 0.6, 0.3));
-  stick.position.y = 0.15 * s;
+  const stickX = side ? -0.40 * s : 0;
+  const stickY = side ? -0.14 * s : -0.12 * s;
+  const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.024 * s, 0.034 * s, 0.28 * s, 8), mat(0x14181d, 0.6, 0.3));
+  stick.position.y = 0.13 * s;
   const grip = new THREE.Mesh(new THREE.SphereGeometry(0.05 * s, 8, 6), mat(0x0d1013, 0.5, 0.2));
-  grip.position.y = 0.31 * s;
+  grip.position.y = 0.28 * s;
   stickGroup.add(stick, grip);
-  stickGroup.position.set(stickX, stickY, 0.42 * s);
+  stickGroup.position.set(stickX, stickY, 0.40 * s);
   g.add(stickGroup);
-  const throttle = new THREE.Mesh(new THREE.BoxGeometry(0.05 * s, 0.05 * s, 0.16 * s), mat(0x14181d));
-  throttle.position.set(stickX + (side ? -0.16 : 0.12) * s, -0.28 * s, 0.34 * s);
-  g.add(throttle);
+  const throttleLever = new THREE.Mesh(new THREE.BoxGeometry(0.05 * s, 0.05 * s, 0.16 * s), mat(0x14181d));
+  throttleLever.position.set(side ? 0.20 * s : 0.14 * s, -0.10 * s, 0.30 * s); // گاز سمت چپ خلبان
+  g.add(throttleLever);
 
-  // ---------- صندلی و خلبان ----------
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.52 * s, 0.14 * s, 0.5 * s), mat(seatCol));
-  seat.position.set(0, -0.42 * s, 0.02 * s);
+  // ---------- صندلی و خلبان (از نمای بیرونی دیده می‌شود) ----------
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.50 * s, 0.13 * s, 0.48 * s), mat(seatCol));
+  seat.position.set(0, -0.16 * s, 0.02 * s);
   g.add(seat);
-  const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.52 * s, 0.62 * s, 0.12 * s), mat(seatCol));
-  seatBack.position.set(0, -0.14 * s, -0.22 * s);
+  const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.50 * s, 0.60 * s, 0.12 * s), mat(seatCol));
+  seatBack.position.set(0, 0.12 * s, -0.24 * s);
   seatBack.rotation.x = 0.14;
   g.add(seatBack);
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.17 * s, 0.26 * s, 4, 8), mat(0x2e3a2a));
-  body.position.set(0, -0.12 * s, -0.10 * s);
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.16 * s, 0.24 * s, 4, 8), mat(0x2e3a2a));
+  body.position.set(0, 0.08 * s, -0.12 * s);
   body.rotation.x = 0.22;
   g.add(body);
-  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.13 * s, 10, 8), mat(0xd8dcd4, 0.4));
-  helmet.position.set(0, 0.10 * s, -0.06 * s);
-  g.add(helmet);
-  const visor = new THREE.Mesh(new THREE.SphereGeometry(0.125 * s, 10, 6, 0, Math.PI * 2, Math.PI * 0.35, Math.PI * 0.35), mat(0x22262c, 0.2, 0.8));
-  visor.position.copy(helmet.position);
+  // سر خلبان — گروه مجزا برای چرخش با نگاه
+  const headGroup = new THREE.Group();
+  headGroup.position.set(0, 0.17 * s, -0.16 * s);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.125 * s, 10, 8), mat(0xd8dcd4, 0.4));
+  const visor = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12 * s, 10, 6, 0, Math.PI * 2, Math.PI * 0.35, Math.PI * 0.35),
+    mat(0x22262c, 0.2, 0.8)
+  );
   visor.rotation.x = 0.35;
-  g.add(visor);
+  headGroup.add(helmet, visor);
+  g.add(headGroup);
 
-  // ---------- قاب کانوپی (دیده‌شدن از داخل) ----------
+  // ---------- قاب کانوپی (اطراف دید) ----------
   for (const sx of [-1, 1]) {
     const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05 * s, 0.05 * s, 1.5 * s), mat(0x9aa4ad, 0.4, 0.7));
-    rail.position.set(sx * 0.52 * s, 0.16 * s, 0.15 * s);
+    rail.position.set(sx * 0.52 * s, 0.20 * s, 0.15 * s);
     g.add(rail);
   }
   const arch = new THREE.Mesh(new THREE.TorusGeometry(0.54 * s, 0.026 * s, 6, 12, Math.PI), mat(0x9aa4ad, 0.4, 0.7));
   arch.rotation.y = Math.PI / 2;
-  arch.position.set(0.0, 0.16 * s, -0.60 * s);
+  arch.position.set(0.0, 0.20 * s, -0.55 * s);
   g.add(arch);
 
   return {
     group: g,
-    stickGroup, throttle,
-    mfds,
+    stickGroup, throttle: throttleLever,
+    mfds, leds, headGroup,
     mfdT: 0,
-    // به‌روزرسانی: استیک با ورودی خلبان + MFD زنده
+    // به‌روزرسانی: استیک/گاز با ورودی خلبان + سر با نگاه + MFD زنده
     update(dt, aircraft, game) {
       const inp = aircraft.input;
       stickGroup.rotation.z = THREE.MathUtils.clamp(inp.roll, -1, 1) * 0.45;
       stickGroup.rotation.x = THREE.MathUtils.clamp(inp.pitch, -1, 1) * 0.35;
-      throttle.position.z = (0.34 + (aircraft.st.throttle - 0.5) * 0.10) * s;
+      throttleLever.position.z = (0.30 + (aircraft.st.throttle - 0.5) * 0.10) * s;
+      // چرخش سر خلبان با نگاه (Ctrl + موس)
+      if (game && game.controls) {
+        const look = game.controls.look;
+        headGroup.rotation.y = THREE.MathUtils.clamp(look.yaw, -1.2, 1.2) * 0.75;
+        headGroup.rotation.x = THREE.MathUtils.clamp(-look.pitch, -0.6, 0.6) * 0.7;
+      }
+      // چراغ‌های هشدار — چشمک زنده
+      const blink = (Date.now() / 400 | 0) % 2 === 0;
+      const warn = aircraft.st.stalled || aircraft.hp < aircraft.hpMax * 0.3;
+      for (let i = 0; i < leds.length; i++) {
+        const isWarn = warn && i % 3 === 0;
+        leds[i].material.color.setHex(isWarn ? (blink ? 0xff3030 : 0x551010) : (i % 3 === 0 ? glowCol : 0x30404a));
+      }
       this.mfdT -= dt;
       if (this.mfdT <= 0) {
         this.mfdT = 0.2;

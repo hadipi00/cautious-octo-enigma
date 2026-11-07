@@ -46,6 +46,35 @@
           transform:translate(-50%,-50%);display:none;box-shadow:0 0 4px rgba(0,0,0,.8)}
   #pipper::after{content:"";position:absolute;left:50%;top:-9px;width:2px;height:6px;background:#fff;transform:translateX(-50%)}
   #rwr{position:absolute;right:3.5%;bottom:17%;width:150px;height:150px;opacity:.92;display:block}
+  /* نشانگر هدف پرواز (موس = اهرم) */
+  #aimReticle{position:absolute;width:34px;height:34px;transform:translate(-50%,-50%);
+              pointer-events:none;display:none;z-index:5}
+  #aimReticle::before{content:"";position:absolute;inset:0;border:2px solid var(--hud);border-radius:50%;
+              box-shadow:0 0 6px rgba(0,0,0,.8), inset 0 0 5px rgba(157,255,176,.35)}
+  #aimReticle::after{content:"";position:absolute;left:50%;top:50%;width:5px;height:5px;background:var(--hud);
+              border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 4px rgba(0,0,0,.9)}
+  #aimReticle .tick{position:absolute;background:var(--hud);opacity:.9}
+  #aimReticle .t1{left:50%;top:-9px;width:2px;height:7px;transform:translateX(-50%)}
+  #aimReticle .t2{left:50%;bottom:-9px;width:2px;height:7px;transform:translateX(-50%)}
+  #aimReticle .t3{top:50%;left:-9px;height:2px;width:7px;transform:translateY(-50%)}
+  #aimReticle .t4{top:50%;right:-9px;height:2px;width:7px;transform:translateY(-50%)}
+  #aimReticle.look{filter:hue-rotate(35deg) saturate(1.4)}
+  /* اهرم مجازی — پایین چپ */
+  #stickUI{position:absolute;left:3%;bottom:9%;width:76px;height:76px;opacity:.9;transition:opacity .3s}
+  #stickUI .base{position:absolute;inset:0;border:2px solid rgba(157,255,176,.5);border-radius:50%;
+              background:radial-gradient(circle,rgba(10,20,14,.55),rgba(10,20,14,.15))}
+  #stickUI .cross{position:absolute;background:rgba(157,255,176,.4)}
+  #stickUI .cx{left:50%;top:6px;bottom:6px;width:1px;transform:translateX(-50%)}
+  #stickUI .cy{top:50%;left:6px;right:6px;height:1px;transform:translateY(-50%)}
+  #stickDot{position:absolute;left:50%;top:50%;width:12px;height:12px;background:var(--hud);
+              border-radius:50%;box-shadow:0 0 8px rgba(157,255,176,.8);transform:translate(-50%,-50%)}
+  #stickUI .lbl{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10.5px;
+              color:#9dffb0;opacity:.75;letter-spacing:1px;white-space:nowrap}
+  /* نشانگر حالت نگاه سر خلبان */
+  #lookBadge{position:absolute;left:50%;top:26%;transform:translateX(-50%);display:none;
+              color:#8ac4ff;font-size:14px;font-weight:bold;text-shadow:0 0 6px rgba(0,0,0,.9);
+              border:1px solid rgba(138,196,255,.55);border-radius:8px;padding:3px 14px;
+              background:rgba(10,18,30,.55)}
   #vignette{position:fixed;inset:0;pointer-events:none;
             background:radial-gradient(ellipse at center,transparent 38%,rgba(12,0,0,.98) 100%);opacity:0}
   #dmg{position:fixed;inset:0;pointer-events:none;
@@ -126,6 +155,9 @@
   <div id="pipper"></div>
   <canvas id="rwr" width="150" height="150"></canvas>
   <div id="camLabel"></div>
+  <div id="aimReticle"><span class="tick t1"></span><span class="tick t2"></span><span class="tick t3"></span><span class="tick t4"></span></div>
+  <div id="stickUI"><span class="lbl">STICK</span><span class="base"></span><span class="cross cx"></span><span class="cross cy"></span><span id="stickDot"></span></div>
+  <div id="lookBadge">👁 سر خلبان — نگاه آزاد</div>
 </div>
 <div id="vignette"></div>
 <div id="dmg"></div>
@@ -133,7 +165,7 @@
 <div id="menu">
   <div class="panel" id="menuPanel">
     <h1>AIRDOM</h1>
-    <div class="sub">شبیه‌ساز نبرد هوایی — نسخه ۲.۰ «رادار و بی‌آر» — هسته WASM</div>
+    <div class="sub">شبیه‌ساز نبرد هوایی — نسخه ۲.۵ «موس‌ایم» — ۲۴ جنگنده — هسته WASM</div>
     <div id="loadMsg">در حال بارگذاری…</div>
     <div id="menuBody" class="hidden">
       <div id="hangar">
@@ -174,8 +206,10 @@
       </div>
       <h2 style="font-size:16px;color:#7ecbff;margin:14px 0 6px">راهنمای کنترل</h2>
       <div class="keys">
-        <span><b>↑ / ↓</b> — دماغه</span>
-        <span><b>A / D</b> — غلت</span>
+        <span><b>موس</b> — اهرم پرواز: دماغه به سمت نشانگر می‌رود</span>
+        <span><b>Ctrl (نگه‌دار)</b> — موس = سر خلبان (نگاه آزاد)</span>
+        <span><b>↑ / ↓</b> — دماغه (کمکی)</span>
+        <span><b>A / D</b> — غلت (کمکی)</span>
         <span><b>Q / E</b> — دُم</span>
         <span><b>W / S</b> — گاز</span>
         <span><b>Z</b> — افتربرنر</span>
@@ -189,9 +223,8 @@
         <span><b>V</b> — فلپ</span>
         <span><b>X</b> — ترمز هوایی</span>
         <span><b>1/2/3</b> — دوربین</span>
-        <span><b>موس</b> — نگاه</span>
+        <span><b>Home</b> — وسط کردن استیک و سر</span>
         <span><b>I/J/K/L</b> — چرخش سر در کابین</span>
-        <span><b>Home</b> — وسط کردن سر</span>
         <span><b>Esc</b> — توقف</span>
         <span><b>F3</b> — پوشش کارایی</span>
       </div>

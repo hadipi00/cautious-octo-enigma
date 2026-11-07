@@ -1,0 +1,78 @@
+{
+  "id": "su30sm",
+  "name": "Su-30SM Flanker-H",
+  "nation": "RUSSIA",
+  "role": "dogfighter",
+  "mass": 18800,
+  "fuelCap": 8000,
+  "thrustMil": 149000,
+  "thrustAB": 245200,
+  "burnMil": 2.0,
+  "burnAB": 9.0,
+  "wingArea": 62.0,
+  "wingSpan": 14.7,
+  "len": 21.94,
+  "CL0": 0.05,
+  "CLa": 4.9,
+  "aStall": 22,
+  "CD0": 0.023,
+  "kInd": 0.1,
+  "maxG": 9,
+  "rollRate": 250,
+  "pitchRate": 24,
+  "yawRate": 11,
+  "gearH": 2.5,
+  "bellyH": 1.25,
+  "guns": [
+    {
+      "name": "GSh-30-1",
+      "ammo": 150,
+      "cal": 30
+    }
+  ],
+  "missiles": [
+    {
+      "name": "R-77",
+      "type": "arh",
+      "count": 2,
+      "range": 16000
+    },
+    {
+      "name": "R-73",
+      "type": "ir",
+      "count": 2,
+      "range": 9000
+    }
+  ],
+  "bombs": 3,
+  "rockets": 0,
+  "flares": 72,
+  "chaff": 72,
+  "stats": {
+    "speed": 0.85,
+    "agility": 0.95,
+    "firepower": 0.85,
+    "armor": 0.88
+  },
+  "visual": {
+    "wingType": "swept",
+    "tailType": "twin",
+    "engines": 2,
+    "canards": true,
+    "body": "#6e7f8d",
+    "accent": "#3f4c5c",
+    "fusW": 1.1
+  },
+  "cockpit": {
+    "style": "russia",
+    "panel": "#2a4a44",
+    "sideStick": false,
+    "mfds": 2
+  },
+  "hp": 100,
+  "radar": {
+    "range": 110000,
+    "gimbal": 65
+  },
+  "rcs": 6
+}

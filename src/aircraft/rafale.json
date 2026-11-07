@@ -1,0 +1,78 @@
+{
+  "id": "rafale",
+  "name": "Rafale C",
+  "nation": "FRANCE",
+  "role": "multirole",
+  "mass": 10300,
+  "fuelCap": 4700,
+  "thrustMil": 100000,
+  "thrustAB": 150000,
+  "burnMil": 1.4,
+  "burnAB": 6.5,
+  "wingArea": 45.7,
+  "wingSpan": 10.9,
+  "len": 15.27,
+  "CL0": 0.04,
+  "CLa": 4.9,
+  "aStall": 20,
+  "CD0": 0.021,
+  "kInd": 0.1,
+  "maxG": 9,
+  "rollRate": 270,
+  "pitchRate": 24,
+  "yawRate": 10,
+  "gearH": 2.2,
+  "bellyH": 1.1,
+  "guns": [
+    {
+      "name": "Nexter 30M791",
+      "ammo": 1250,
+      "cal": 30
+    }
+  ],
+  "missiles": [
+    {
+      "name": "MICA EM",
+      "type": "arh",
+      "count": 2,
+      "range": 14000
+    },
+    {
+      "name": "MICA IR",
+      "type": "ir",
+      "count": 2,
+      "range": 11000
+    }
+  ],
+  "bombs": 3,
+  "rockets": 0,
+  "flares": 72,
+  "chaff": 72,
+  "stats": {
+    "speed": 0.82,
+    "agility": 0.95,
+    "firepower": 0.9,
+    "armor": 0.85
+  },
+  "visual": {
+    "wingType": "delta",
+    "tailType": "single",
+    "engines": 2,
+    "canards": true,
+    "body": "#6b7887",
+    "accent": "#47536b",
+    "fusW": 1.05
+  },
+  "cockpit": {
+    "style": "west",
+    "panel": "#2b3138",
+    "sideStick": true,
+    "mfds": 2
+  },
+  "hp": 92,
+  "radar": {
+    "range": 110000,
+    "gimbal": 70
+  },
+  "rcs": 3
+}

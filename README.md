@@ -2,13 +2,17 @@
 
 **AIRDOM** یک بازی/شبیه‌ساز نبرد هوایی سه‌بعدی است که کاملاً در مرورگر اجرا می‌شود — با فلایت‌مدل نیمه‌واقعی، **رادار و جنگ الکترونیک (BVR)**، خلبان‌های AI، تسلیحات کامل، بیس زمینیِ پدافنددار و بازی گروهی روی WiFi. هسته محاسبات سنگین (بالستیک، معادله رادار، حل پیش‌روی) روی **WebAssembly** اجرا می‌شود.
 
-> AIRDOM is a browser-based 3D air-combat flight simulator with a WASM compute core: real radar (SRCH/TWS/STT), RWR electronic warfare, IR/SARH/ARH missiles, 12 flyable jets, AI dogfights, ground strike and LAN multiplayer. Built with Three.js — zero build tools for the game itself.
+> AIRDOM is a browser-based 3D air-combat flight simulator with a WASM compute core: real radar (SRCH/TWS/STT), RWR electronic warfare, IR/SARH/ARH missiles, 24 flyable jets, War-Thunder-style mouse-aim instructor, AI dogfights, ground strike and LAN multiplayer. Built with Three.js — zero build tools for the game itself.
 
 ---
 
-## ✨ امکانات نسخه ۲.۰
+## ✨ امکانات نسخه ۲.۵
 
-- **۱۲ جنگنده واقعی**: F-16C، F-15C، F-14B (بال متغیر)، F-4E، A-10A، Su-27S، MiG-29A، MiG-21bis، MiG-23ML، Su-25، Mirage 2000C، JAS 39C
+- **۲۴ جنگنده واقعی** از نسل اول تا پنجم: MiG-15bis، F-5E، F-104S، MiG-21bis، F-4E، MiG-23ML، Mirage F1، Tornado IDS (بال متغیر)، Su-24M (بال متغیر)، A-10A، Su-25، F-14B (بال متغیر)، F-15C، F-16C، F/A-18C، MiG-29A، Mirage 2000C، Su-27S، Su-30SM (کانارد)، JAS 39C، Rafale (کانارد)، Typhoon (کانارد)، F-22A، MiG-31BM
+- **موس = اهرم پرواز (موس‌ایم وارتاندر)**: نشانگر موس نقطه هدف پرواز است؛ «اینستراکتور مجازی» بانک و پیچ را حساب می‌کند و دماغه را به همان نقطه می‌برد — رها کنی، پرواز صاف حفظ می‌شود (با محافظت استال)
+- **Ctrl = سر خلبان**: نگه‌داشتن Ctrl (یا Alt) موس را به «چرخش سر» تبدیل می‌کند؛ هواپیما مسیرش را حفظ می‌کند، سر خلبانِ سه‌بعدی هم با نگاه می‌چرخد؛ Home = وسط کردن استیک و سر
+- **انیمیشن سکان‌ها**: ایلرون، اورلات، ردر، فلپ، کانارد و ترمز هوایی — همه با ورودی خلبان واقعاً حرکت می‌کنند + چرخ فرود تاشو نرم + **بال متغیر خودکار** (F-14/Tornado/Su-24 با سرعت جاروب می‌شود)
+- **گرافیک و روانی**: کابین بازطراحی‌شده با داشبورد در ارتفاع چشم و MFDهای زنده (دید جلو درست شد — قبلاً رو به دم بود!)، شیشه کانوپی نیمه‌شفاف، لنز فلر خورشید، FOV دینامیک با سرعت/AB، کانتریل ارتفاع بالا، آسمان بدون اعوجاج
 - **هسته WASM** (`native/simcore.wat` → `src/wasm/simcore.wasm`):
   انتگرال‌گیری بالستیک دسته‌ای همه توپ‌ها/بمب/راکت/موشک‌های کور،
   معادله رادار (SNR با RCS و ناتچینگ)، حل‌گر پیش‌روی توپ — با fallback خودکار JS
@@ -60,7 +64,8 @@ node server.js 9090
 | Z | افتربرنر | C | فلر + چف |
 | **N** | **حالت رادار: جستجو→TWS→STT** | X | ترمز هوایی |
 | G | چرخ فرود | V | فلپ |
-| 1/2/3 | کابین / تعقیب / دور | موس | نگاه اطراف |
+| 1/2/3 | کابین / تعقیب / دور | **موس** | **اهرم پرواز — دماغه به سمت نشانگر** |
+| **Ctrl (نگه‌دار)** | **موس = سر خلبان (نگاه آزاد)** | Home | وسط کردن استیک و سر |
 | I/J/K/L | چرخش سر در کابین | Esc | توقف |
 | F3 | پوشش کارایی | | |
 

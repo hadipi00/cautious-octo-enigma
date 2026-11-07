@@ -1,0 +1,77 @@
+{
+  "id": "mig31bm",
+  "name": "MiG-31BM Foxhound",
+  "nation": "RUSSIA",
+  "role": "interceptor",
+  "mass": 21800,
+  "fuelCap": 9500,
+  "thrustMil": 186200,
+  "thrustAB": 304000,
+  "burnMil": 2.4,
+  "burnAB": 10.5,
+  "wingArea": 61.6,
+  "wingSpan": 13.46,
+  "len": 22.69,
+  "CL0": 0.05,
+  "CLa": 4.3,
+  "aStall": 14,
+  "CD0": 0.028,
+  "kInd": 0.12,
+  "maxG": 5,
+  "rollRate": 120,
+  "pitchRate": 10,
+  "yawRate": 5,
+  "gearH": 2.6,
+  "bellyH": 1.3,
+  "guns": [
+    {
+      "name": "GSh-6-11",
+      "ammo": 260,
+      "cal": 23
+    }
+  ],
+  "missiles": [
+    {
+      "name": "R-33S",
+      "type": "arh",
+      "count": 2,
+      "range": 32000
+    },
+    {
+      "name": "R-60M",
+      "type": "ir",
+      "count": 2,
+      "range": 6000
+    }
+  ],
+  "bombs": 0,
+  "rockets": 0,
+  "flares": 60,
+  "chaff": 60,
+  "stats": {
+    "speed": 1.0,
+    "agility": 0.3,
+    "firepower": 0.9,
+    "armor": 0.95
+  },
+  "visual": {
+    "wingType": "swept",
+    "tailType": "twin",
+    "engines": 2,
+    "body": "#8a939e",
+    "accent": "#4e5a6b",
+    "fusW": 1.2
+  },
+  "cockpit": {
+    "style": "russia",
+    "panel": "#2a4a44",
+    "sideStick": false,
+    "mfds": 2
+  },
+  "hp": 110,
+  "radar": {
+    "range": 160000,
+    "gimbal": 65
+  },
+  "rcs": 9
+}

@@ -1,4 +1,4 @@
-// نقطه ورود — بارگذاری ۱۲ جنگنده + هسته WASM و راه‌اندازی
+// نقطه ورود — بارگذاری ۲۴ جنگنده + هسته WASM و راه‌اندازی
 import { Game } from './game.js';
 import { loadSettings } from './config.js';
 import { simcore } from './wasm/simcore.js';
@@ -7,9 +7,18 @@ const canvas = document.getElementById('c');
 const params = new URLSearchParams(location.search);
 
 const PLANE_IDS = [
-  'f16c', 'f15c', 'f14b', 'f4e', 'a10a',
-  'mig29a', 'mig21bis', 'mig23ml', 'su27s', 'su25',
-  'mirage2000c', 'jas39c',
+  // نسل اول
+  'mig15bis', 'f5e', 'f104s', 'mig21bis',
+  // جنگ سرد
+  'f4e', 'mig23ml', 'miragef1', 'tornado', 'su24m',
+  // ضربتی/تهاجمی
+  'a10a', 'su25',
+  // نسل چهارم
+  'f14b', 'f15c', 'f16c', 'fa18c', 'mig29a', 'mirage2000c', 'su27s', 'su30sm',
+  // دلتا-کانارد اروپا
+  'jas39c', 'rafale', 'typhoon',
+  // نسل پنجم/رهگیر سنگین
+  'f22a', 'mig31bm',
 ];
 
 async function boot() {

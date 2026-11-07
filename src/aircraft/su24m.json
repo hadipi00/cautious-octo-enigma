@@ -1,0 +1,71 @@
+{
+  "id": "su24m",
+  "name": "Su-24M Fencer",
+  "nation": "RUSSIA",
+  "role": "strike",
+  "mass": 22300,
+  "fuelCap": 9500,
+  "thrustMil": 152800,
+  "thrustAB": 219600,
+  "burnMil": 2.2,
+  "burnAB": 9.5,
+  "wingArea": 55.2,
+  "wingSpan": 17.64,
+  "len": 22.53,
+  "CL0": 0.05,
+  "CLa": 4.4,
+  "aStall": 17,
+  "CD0": 0.032,
+  "kInd": 0.12,
+  "maxG": 6.5,
+  "rollRate": 130,
+  "pitchRate": 12,
+  "yawRate": 6,
+  "gearH": 2.6,
+  "bellyH": 1.3,
+  "guns": [
+    {
+      "name": "GSh-6-23",
+      "ammo": 500,
+      "cal": 23
+    }
+  ],
+  "missiles": [
+    {
+      "name": "R-60M",
+      "type": "ir",
+      "count": 2,
+      "range": 6000
+    }
+  ],
+  "bombs": 4,
+  "rockets": 32,
+  "flares": 64,
+  "chaff": 64,
+  "stats": {
+    "speed": 0.78,
+    "agility": 0.35,
+    "firepower": 0.8,
+    "armor": 0.9
+  },
+  "visual": {
+    "wingType": "variable",
+    "tailType": "single",
+    "engines": 2,
+    "body": "#757d6a",
+    "accent": "#4a5240",
+    "fusW": 1.15
+  },
+  "cockpit": {
+    "style": "russia",
+    "panel": "#2a4a44",
+    "sideStick": false,
+    "mfds": 2
+  },
+  "hp": 105,
+  "radar": {
+    "range": 70000,
+    "gimbal": 50
+  },
+  "rcs": 7
+}
