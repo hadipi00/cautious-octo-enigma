@@ -136,6 +136,8 @@ export class Game {
     });
     this.aircraft.push(this.player);
     this.controls.reset();
+    // همه اسپاون‌ها هوایی‌اند — چرخ فرود باید بالا باشد
+    this.controls.gear = false;
 
     this.wave = 0; this.kills = 0; this.score = 0;
     this._nextWave = false; this._waveTimer = 0;
